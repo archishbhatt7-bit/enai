@@ -40,6 +40,7 @@ export default function ShopPage() {
   const [selectedService, setSelectedService] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [timePeriod, setTimePeriod] = useState<"morning" | "afternoon" | "evening">("morning");
   const [paymentType, setPaymentType] = useState<"token" | "full">("token");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -282,7 +283,7 @@ export default function ShopPage() {
                 return (
                   <button
                     key={str}
-                    onClick={() => { setSelectedDate(str); setSelectedTime(null); }}
+                    onClick={() => { setSelectedDate(str); setSelectedTime(null); setTimePeriod("morning"); }}
                     className={`flex-shrink-0 text-center px-3 py-2.5 rounded-lg border transition-all ${
                       active
                         ? "bg-amber-500 border-amber-500 text-slate-900"
@@ -297,50 +298,106 @@ export default function ShopPage() {
             </div>
 
             {slotsLoading && (
-              <div className="grid grid-cols-3 gap-2">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />
-                ))}
+              <div className="space-y-3">
+                <div className="h-12 bg-slate-100 rounded-xl animate-pulse" />
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
               </div>
             )}
 
-            {!slotsLoading && slotsData && (
-              <>
-                <p className="text-xs text-slate-400 mb-3 font-medium">
-                  {formatDisplayDate(new Date(selectedDate + "T12:00:00"))} — available slots (2h advance booking required)
-                </p>
-                {slotsData.slots.filter((s) => s.available).length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-slate-500 text-sm font-medium">No slots available for this date</p>
-                    <p className="text-slate-400 text-xs mt-1">Try selecting another date</p>
+            {!slotsLoading && slotsData && (() => {
+              const allSlots = slotsData.slots;
+
+              const inPeriod = (time: string, period: typeof timePeriod) => {
+                const h = parseInt(time.split(":")[0], 10);
+                if (period === "morning")   return h >= 0  && h < 12;
+                if (period === "afternoon") return h >= 12 && h < 17;
+                return h >= 17;
+              };
+
+              const countAvail = (period: typeof timePeriod) =>
+                allSlots.filter((s) => s.available && inPeriod(s.time, period)).length;
+
+              const morningCount   = countAvail("morning");
+              const afternoonCount = countAvail("afternoon");
+              const eveningCount   = countAvail("evening");
+
+              const periods = [
+                { key: "morning"   as const, label: "Morning",   emoji: "🌅", range: "before 12 PM", count: morningCount   },
+                { key: "afternoon" as const, label: "Afternoon",  emoji: "☀️", range: "12 – 5 PM",   count: afternoonCount },
+                { key: "evening"   as const, label: "Evening",    emoji: "🌆", range: "after 5 PM",   count: eveningCount   },
+              ];
+
+              const visibleSlots = allSlots.filter((s) => inPeriod(s.time, timePeriod));
+
+              return (
+                <>
+                  {/* Period tabs */}
+                  <div className="grid grid-cols-3 gap-2 mb-5">
+                    {periods.map(({ key, label, emoji, range, count }) => {
+                      const active = timePeriod === key;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => { setTimePeriod(key); setSelectedTime(null); }}
+                          className={`flex flex-col items-center py-3 px-2 rounded-xl border-2 transition-all ${
+                            active
+                              ? "border-amber-500 bg-amber-50"
+                              : "border-slate-200 bg-white hover:border-amber-300"
+                          }`}
+                        >
+                          <span className="text-xl mb-1 leading-none">{emoji}</span>
+                          <span className={`text-xs font-bold ${active ? "text-amber-700" : "text-slate-700"}`}>{label}</span>
+                          <span className="text-xs text-slate-400 mt-0.5">{range}</span>
+                          <span className={`mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            count > 0
+                              ? active ? "bg-amber-500 text-slate-900" : "bg-slate-100 text-slate-600"
+                              : "bg-slate-50 text-slate-300"
+                          }`}>
+                            {count} slot{count !== 1 ? "s" : ""}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {slotsData.slots.map((slot) => (
-                      <button
-                        key={slot.time}
-                        disabled={!slot.available}
-                        onClick={() => { setSelectedTime(slot.time); setStep("payment"); }}
-                        className={`py-3 px-2 rounded-lg text-sm font-semibold border transition-all ${
-                          !slot.available
-                            ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
-                            : selectedTime === slot.time
-                            ? "bg-amber-500 border-amber-500 text-slate-900"
-                            : "bg-white border-slate-200 text-slate-700 hover:border-amber-400 hover:bg-amber-50"
-                        }`}
-                      >
-                        {slot.time}
-                        {slot.available && (
-                          <div className="text-xs font-normal opacity-60 mt-0.5">
-                            {slot.availableChairs} left
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+
+                  {/* Slot grid */}
+                  {visibleSlots.filter((s) => s.available).length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-slate-500 text-sm font-medium">No {timePeriod} slots available</p>
+                      <p className="text-slate-400 text-xs mt-1">Try a different time of day or date</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {visibleSlots.map((slot) => (
+                        <button
+                          key={slot.time}
+                          disabled={!slot.available}
+                          onClick={() => { setSelectedTime(slot.time); setStep("payment"); }}
+                          className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-all ${
+                            !slot.available
+                              ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                              : selectedTime === slot.time
+                              ? "bg-amber-500 border-amber-500 text-slate-900"
+                              : "bg-white border-slate-200 text-slate-700 hover:border-amber-400 hover:bg-amber-50"
+                          }`}
+                        >
+                          {slot.time}
+                          {slot.available && (
+                            <div className="text-xs font-normal opacity-60 mt-0.5">
+                              {slot.availableChairs} left
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
