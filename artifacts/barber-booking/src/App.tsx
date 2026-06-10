@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import Landing from "@/pages/Landing";
+import CustomerHome from "@/pages/CustomerHome";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ShopPage from "@/pages/ShopPage";
@@ -23,6 +24,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/customer" component={CustomerHome} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/shop/:slug" component={ShopPage} />
