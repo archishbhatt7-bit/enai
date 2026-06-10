@@ -1,0 +1,72 @@
+### Role & Objective
+You are an expert Full-Stack Developer and UI/UX Designer specializing in Next.js, Tailwind CSS, PostgreSQL, and mobile-first web systems. 
+Build a mobile-responsive, multi-tenant SaaS Barber Slot Booking Platform designed for the Indian market. The system allows any barber shop to register, generate a unique homepage URL, and accept frictionless slot bookings via a physical in-shop QR code with zero customer app downloads.
+
+---
+
+### Tech Stack & Framework Specs
+- **Frontend/Backend:** Next.js (App Router), React, Tailwind CSS. Must be styled with an ultra-clean, Minimalist Light Mode aesthetic (high use of whitespace, crisp borders, fast-loading mobile layouts).
+- **Page Backgrounds:** Strictly use **solid colors** (e.g., clean Tailwind utility classes like `bg-slate-50` or `bg-white`) for the landing and login pages. **DO NOT** generate, fetch, or use background images. Keep it lightweight and fast.
+- **Database:** PostgreSQL with Prisma ORM.
+- **Payments:** Razorpay API integration (configured for Test Mode initially).
+- **Messaging:** Node-based open-source WhatsApp integration wrapper framework (structured using `whatsapp-web.js` or `Baileys` logic) to route OTPs and confirmations completely free via a linked device.
+
+---
+
+### Core App Logic & Rules
+
+1. **Advance Booking Rule:** Customers can only book slots a minimum of 2 hours in advance (e.g., to get a haircut at 12:00 PM, they must complete the booking by 10:00 AM at the latest).
+2. **The Buffer Logic:** 
+   - Every service block automatically adds a mandatory 10-minute cleanup buffer on the backend.
+   - Customers receive a UI popup warning them to arrive 5–10 minutes early (Buffer timing).
+   - Barbers get a 5-minute pre-slot notification visual on their schedule to clear up previous work.
+3. **Dual-Payment & Payout Structure:**
+   - **Option A (Partial):** Pay ₹1 token booking fee upfront on the app via Razorpay. Pay the remaining fixed service balance (e.g., ₹100) directly to the barber in person after the service.
+   - **Option B (Full Upfront):** Pay the full service fee upfront on the web app. If chosen, the platform waives the ₹1 booking charge. This money is held centrally by the platform.
+4. **Rapido-Style OTP Verification & Instant Payout:** 
+   - When any booking is confirmed, the system generates a unique 4-digit OTP and texts it to the customer via WhatsApp.
+   - When the customer arrives and sits on the barber's chair, they give the OTP to the barber.
+   - The barber enters this OTP into their live dashboard *at the start of the service*. 
+   - Entering the correct OTP instantly marks the customer as arrived, activates the slot, and triggers an immediate simulation of routing the upfront held funds directly to the barber's account.
+5. **No-Show Policy:** If a customer is more than 10 minutes late, the barber can hit "Mark No-Show". The slot is cancelled, the chair opens back up, and the platform permanently keeps the ₹1 booking fee.
+
+---
+
+### Page Views & Features to Build
+
+#### 1. Main Portal Entry / Login Page Layout
+- Set against a stark, clean, solid color background with zero background images.
+- Structure the page with an asymmetric two-box interface:
+  - **Box 1 (Customer Core - Big Box):** A prominent, high-visibility large container/card for general users to search for local shops or explore services.
+  - **Box 2 (Barber Dashboard Access - Small Box):** A smaller, secondary card or action button placed intentionally below or adjacent to the primary box, dedicated to Barber login and shop registration.
+
+#### 2. Self-Serve Barber Registration & Onboarding
+- A simple, direct registration portal accessed via the "Small Box" link. Barbers join instantly without manual admin approval.
+- **Onboarding Inputs:** Owner Name, Shop Name, Number of working chairs, and Number of active barbers.
+- **Service Configuration Checklist:** A multi-select menu populated with standard Indian grooming services (Haircut, Beard Trim, Face Massage, De-tan, Hair Color). For each checked service, the barber can input their custom fixed price (e.g., ₹100 for haircut, ₹40 for beard) and the average duration in minutes.
+
+#### 3. The Customer Booking Flow (Dynamic URL)
+- Dynamically mapped to a clean profile page (e.g., `/shop/[shop_slug]`).
+- Displays the shop name, active services list, and a prominent live "Open/Closed" status badge.
+- **Frictionless Booking Interface (3-4 Taps):** 
+  - Select Service -> Select Date & Available Time Slot -> Select Payment Option (₹1 Booking Fee vs Full Upfront).
+  - Secure check-out phase: Requires only Name and Phone Number, verified seamlessly via a 4-digit WhatsApp OTP before finalizing payment.
+
+#### 4. The Barber Admin Dashboard & Visual Timeline
+- Secure login for the shop owner.
+- **The Visual Timeline UI:** A beautifully clean horizontal layout where each physical "Chair" is mapped as an independent row. The X-axis represents operational hours. 
+  - Slots booked online are highlighted in a solid minimalist color block, showing the customer name and booked services.
+  - Unbooked slots remain stark white and empty, allowing the barber to easily visualize exactly when to protect a chair for an upcoming arrival.
+- **Operational Controls:**
+  - A universal "Open/Closed" master toggle switch.
+  - A quick "Pause Bookings" panic button (Options for 30 Mins / 1 Hour) to freeze incoming requests during power cuts or breaks.
+  - An input field for the Rapido-style arrival OTP on each active slot.
+- **Audio Alerts:** Integrate an audible voice notification or distinct ringtone that triggers automatically on the browser whenever a new online booking lands.
+
+---
+
+### Step-by-Step Implementation Instructions
+1. Initialize the PostgreSQL schema based on the entities described (Shops, Chairs, Services, Bookings, System Logs).
+2. Construct the core booking concurrency engine that correctly calculates open slots based on the formula: `(Number of Chairs) - (Active Bookings within Service Duration + 10 min buffer)`.
+3. Design the mobile-first layouts using crisp border design elements and pure solid background colors, then hook up the mock Razorpay integration.
+4. Build the Barber Visual Timeline dashboard ensuring real-time UI updates when bookings are made or OTPs are cleared.

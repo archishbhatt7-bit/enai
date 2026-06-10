@@ -1,0 +1,2 @@
+- [Auth file extension](auth-tsx-extension.md) — AuthProvider JSX must be in .tsx not .ts; esbuild won't process JSX in plain .ts files.
+- [Orval TS2308 fix](orval-ts2308.md) — endpoints with both path+query params cause Orval collision; fix by moving query params to path params.

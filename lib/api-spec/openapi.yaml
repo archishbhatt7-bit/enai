@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Barber Slot Booking Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: shops
+    description: Shop management
+  - name: services
+    description: Service management
+  - name: bookings
+    description: Booking operations
+  - name: slots
+    description: Slot availability
+  - name: auth
+    description: Authentication
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,570 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ──────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: registerBarber
+      tags: [auth]
+      summary: Register a new barber shop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BarberRegistrationInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Shop slug already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginBarber
+      tags: [auth]
+      summary: Barber login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/send-otp:
+    post:
+      operationId: sendOtp
+      tags: [auth]
+      summary: Send OTP to customer phone for booking verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOtpInput"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpSentResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify customer OTP for booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpInput"
+      responses:
+        "200":
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpVerifyResponse"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── SHOPS ─────────────────────────────────────────────────────────────
+  /shops:
+    get:
+      operationId: listShops
+      tags: [shops]
+      summary: Search/list shops
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search by name or city
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of shops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShopSummary"
+
+  /shops/{slug}:
+    get:
+      operationId: getShop
+      tags: [shops]
+      summary: Get shop public profile
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shop profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopProfile"
+        "404":
+          description: Shop not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shops/{slug}/status:
+    patch:
+      operationId: updateShopStatus
+      tags: [shops]
+      summary: Toggle shop open/closed or pause bookings
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopStatusInput"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopStatusResponse"
+
+  /shops/{slug}/settings:
+    patch:
+      operationId: updateShopSettings
+      tags: [shops]
+      summary: Update shop settings (chairs, barbers, name)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopSettingsInput"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shop"
+
+  /shops/{slug}/dashboard:
+    get:
+      operationId: getShopDashboard
+      tags: [shops]
+      summary: Get dashboard summary (totals, today stats)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  # ── SERVICES ──────────────────────────────────────────────────────────
+  /shops/{slug}/services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List services for a shop
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Add a service to shop
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /shops/{slug}/services/{serviceId}:
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: Service updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── SLOTS ─────────────────────────────────────────────────────────────
+  /shops/{slug}/slots/{date}/{serviceId}:
+    get:
+      operationId: getAvailableSlots
+      tags: [slots]
+      summary: Get available time slots for a shop on a given date for a given service
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Date in YYYY-MM-DD format
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Service to book
+      responses:
+        "200":
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailableSlotsResponse"
+
+  # ── BOOKINGS ──────────────────────────────────────────────────────────
+  /shops/{slug}/bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List bookings for a shop (barber dashboard) for today
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a new booking
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Slot unavailable or advance booking rule violated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Slot conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shops/{slug}/bookings/{bookingId}/verify-otp:
+    post:
+      operationId: verifyArrivalOtp
+      tags: [bookings]
+      summary: Barber verifies customer arrival OTP to activate slot
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ArrivalOtpInput"
+      responses:
+        "200":
+          description: OTP verified, slot activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /shops/{slug}/bookings/{bookingId}/no-show:
+    post:
+      operationId: markNoShow
+      tags: [bookings]
+      summary: Mark a booking as no-show
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked no-show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /shops/{slug}/bookings/{bookingId}/complete:
+    post:
+      operationId: completeBooking
+      tags: [bookings]
+      summary: Mark booking as completed
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /shops/{slug}/timeline/{date}:
+    get:
+      operationId: getTimeline
+      tags: [bookings]
+      summary: Get visual chair timeline for a given date
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Date in YYYY-MM-DD format
+      responses:
+        "200":
+          description: Timeline data per chair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimelineResponse"
+
+  /shops/{slug}/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [bookings]
+      summary: Get recent booking activity feed (last 10 items)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /shops/{slug}/revenue:
+    get:
+      operationId: getRevenueStats
+      tags: [bookings]
+      summary: Revenue stats by day for last 7 days
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revenue stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueDay"
+
+# ── COMPONENTS ────────────────────────────────────────────────────────────
 components:
   schemas:
     HealthStatus:
@@ -31,6 +604,420 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    # Auth
+    BarberRegistrationInput:
+      type: object
+      required: [ownerName, shopName, phone, password, numChairs, numBarbers, city]
+      properties:
+        ownerName:
+          type: string
+        shopName:
+          type: string
+        phone:
+          type: string
+        password:
+          type: string
+        numChairs:
+          type: integer
+          minimum: 1
+        numBarbers:
+          type: integer
+          minimum: 1
+        city:
+          type: string
+        address:
+          type: string
+        openTime:
+          type: string
+          description: "HH:MM format e.g. 09:00"
+        closeTime:
+          type: string
+          description: "HH:MM format e.g. 20:00"
+
+    LoginInput:
+      type: object
+      required: [phone, password]
+      properties:
+        phone:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        shop:
+          $ref: "#/components/schemas/Shop"
+      required: [token, shop]
+
+    SendOtpInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+
+    OtpSentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success, message]
+
+    VerifyOtpInput:
+      type: object
+      required: [phone, otp]
+      properties:
+        phone:
+          type: string
+        otp:
+          type: string
+
+    OtpVerifyResponse:
+      type: object
+      properties:
+        verified:
+          type: boolean
+        token:
+          type: string
+      required: [verified]
+
+    # Shop
+    Shop:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        shopName:
+          type: string
+        ownerName:
+          type: string
+        phone:
+          type: string
+        city:
+          type: string
+        address:
+          type: ["string", "null"]
+        numChairs:
+          type: integer
+        numBarbers:
+          type: integer
+        isOpen:
+          type: boolean
+        isPaused:
+          type: boolean
+        pausedUntil:
+          type: ["string", "null"]
+        openTime:
+          type: string
+        closeTime:
+          type: string
+        createdAt:
+          type: string
+      required: [id, slug, shopName, ownerName, phone, city, numChairs, numBarbers, isOpen, isPaused, openTime, closeTime, createdAt]
+
+    ShopSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        shopName:
+          type: string
+        ownerName:
+          type: string
+        city:
+          type: string
+        isOpen:
+          type: boolean
+        isPaused:
+          type: boolean
+        numChairs:
+          type: integer
+        servicesCount:
+          type: integer
+        minPrice:
+          type: ["integer", "null"]
+      required: [id, slug, shopName, ownerName, city, isOpen, isPaused, numChairs, servicesCount]
+
+    ShopProfile:
+      type: object
+      properties:
+        shop:
+          $ref: "#/components/schemas/Shop"
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+      required: [shop, services]
+
+    ShopStatusInput:
+      type: object
+      properties:
+        isOpen:
+          type: boolean
+        pauseMinutes:
+          type: ["integer", "null"]
+          description: "Pause bookings for N minutes (30 or 60). Pass null to unpause."
+
+    ShopStatusResponse:
+      type: object
+      properties:
+        isOpen:
+          type: boolean
+        isPaused:
+          type: boolean
+        pausedUntil:
+          type: ["string", "null"]
+      required: [isOpen, isPaused]
+
+    ShopSettingsInput:
+      type: object
+      properties:
+        shopName:
+          type: string
+        numChairs:
+          type: integer
+        numBarbers:
+          type: integer
+        openTime:
+          type: string
+        closeTime:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+
+    DashboardSummary:
+      type: object
+      properties:
+        todayBookings:
+          type: integer
+        todayRevenue:
+          type: integer
+        activeSlots:
+          type: integer
+        availableChairs:
+          type: integer
+        completedToday:
+          type: integer
+        noShowsToday:
+          type: integer
+        weeklyBookings:
+          type: integer
+        weeklyRevenue:
+          type: integer
+      required: [todayBookings, todayRevenue, activeSlots, availableChairs, completedToday, noShowsToday, weeklyBookings, weeklyRevenue]
+
+    # Service
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: integer
+        name:
+          type: string
+        price:
+          type: integer
+          description: Price in INR
+        durationMinutes:
+          type: integer
+          description: Service duration in minutes (buffer added server-side)
+        isActive:
+          type: boolean
+      required: [id, shopId, name, price, durationMinutes, isActive]
+
+    ServiceInput:
+      type: object
+      required: [name, price, durationMinutes]
+      properties:
+        name:
+          type: string
+        price:
+          type: integer
+        durationMinutes:
+          type: integer
+
+    ServiceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        price:
+          type: integer
+        durationMinutes:
+          type: integer
+        isActive:
+          type: boolean
+
+    # Slots
+    AvailableSlotsResponse:
+      type: object
+      properties:
+        date:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSlot"
+        shopIsOpen:
+          type: boolean
+        shopIsPaused:
+          type: boolean
+      required: [date, slots, shopIsOpen, shopIsPaused]
+
+    TimeSlot:
+      type: object
+      properties:
+        time:
+          type: string
+          description: "HH:MM format"
+        available:
+          type: boolean
+        availableChairs:
+          type: integer
+      required: [time, available, availableChairs]
+
+    # Booking
+    BookingInput:
+      type: object
+      required: [customerName, customerPhone, serviceId, slotDate, slotTime, paymentType]
+      properties:
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        serviceId:
+          type: integer
+        slotDate:
+          type: string
+          format: date
+        slotTime:
+          type: string
+          description: "HH:MM format"
+        paymentType:
+          type: string
+          enum: [token, full]
+          description: "token = pay 1 INR now + rest in person; full = pay full upfront"
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: integer
+        serviceId:
+          type: integer
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        slotDate:
+          type: string
+        slotTime:
+          type: string
+        slotEndTime:
+          type: string
+        chairNumber:
+          type: integer
+        status:
+          type: string
+          enum: [pending, confirmed, active, completed, no_show, cancelled]
+        paymentType:
+          type: string
+          enum: [token, full]
+        amountPaid:
+          type: integer
+        totalAmount:
+          type: integer
+        arrivalOtp:
+          type: ["string", "null"]
+        service:
+          $ref: "#/components/schemas/Service"
+        createdAt:
+          type: string
+      required: [id, shopId, serviceId, customerName, customerPhone, slotDate, slotTime, slotEndTime, chairNumber, status, paymentType, amountPaid, totalAmount, createdAt]
+
+    ArrivalOtpInput:
+      type: object
+      required: [otp]
+      properties:
+        otp:
+          type: string
+
+    # Timeline
+    TimelineResponse:
+      type: object
+      properties:
+        date:
+          type: string
+        chairs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChairTimeline"
+        openTime:
+          type: string
+        closeTime:
+          type: string
+      required: [date, chairs, openTime, closeTime]
+
+    ChairTimeline:
+      type: object
+      properties:
+        chairNumber:
+          type: integer
+        bookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+      required: [chairNumber, bookings]
+
+    # Activity & Revenue
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [new_booking, arrival, no_show, completed, cancelled]
+        customerName:
+          type: string
+        serviceName:
+          type: string
+        slotTime:
+          type: string
+        createdAt:
+          type: string
+      required: [id, type, customerName, serviceName, slotTime, createdAt]
+
+    RevenueDay:
+      type: object
+      properties:
+        date:
+          type: string
+        bookings:
+          type: integer
+        revenue:
+          type: integer
+      required: [date, bookings, revenue]

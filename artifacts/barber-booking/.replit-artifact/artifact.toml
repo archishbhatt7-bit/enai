@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Barber Slot Booking"
+version = "1.0.0"
+id = "artifacts/barber-booking"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18406
+
+[services.development]
+run = "pnpm --filter @workspace/barber-booking run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/barber-booking", "run", "build" ]
+publicDir = "artifacts/barber-booking/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18406"
+BASE_PATH = "/"

@@ -1,0 +1,444 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useRegisterBarber, useCreateService } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth";
+import { Scissors, ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+
+const PRESET_SERVICES = [
+  { name: "Haircut", price: 150, durationMinutes: 30 },
+  { name: "Beard Trim", price: 80, durationMinutes: 20 },
+  { name: "Shave", price: 60, durationMinutes: 15 },
+  { name: "Face Massage", price: 120, durationMinutes: 25 },
+  { name: "De-tan", price: 200, durationMinutes: 40 },
+  { name: "Hair Color", price: 400, durationMinutes: 60 },
+  { name: "Hair Wash", price: 80, durationMinutes: 20 },
+];
+
+interface ServiceConfig {
+  name: string;
+  price: number;
+  durationMinutes: number;
+}
+
+type Step = "details" | "services" | "done";
+
+export default function Register() {
+  const [, navigate] = useLocation();
+  const { login } = useAuth();
+  const [step, setStep] = useState<Step>("details");
+  const [error, setError] = useState("");
+  const [shopSlug, setShopSlug] = useState("");
+  const [shopName, setShopName] = useState("");
+
+  const [form, setForm] = useState({
+    ownerName: "",
+    shopName: "",
+    phone: "",
+    password: "",
+    numChairs: 2,
+    numBarbers: 2,
+    city: "",
+    address: "",
+    openTime: "09:00",
+    closeTime: "20:00",
+  });
+
+  const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({});
+  const [serviceConfigs, setServiceConfigs] = useState<Record<string, ServiceConfig>>(
+    Object.fromEntries(PRESET_SERVICES.map((s) => [s.name, { ...s }]))
+  );
+  const [customServices, setCustomServices] = useState<ServiceConfig[]>([]);
+
+  const registerMutation = useRegisterBarber({
+    mutation: {
+      onSuccess: (data) => {
+        login(data.token, data.shop);
+        setShopSlug(data.shop.slug);
+        setShopName(data.shop.shopName);
+        setStep("services");
+      },
+      onError: (err: any) => {
+        setError(err?.data?.error || "Registration failed. Please try again.");
+      },
+    },
+  });
+
+  const createServiceMutation = useCreateService();
+
+  const handleDetailsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!form.ownerName || !form.shopName || !form.phone || !form.password || !form.city) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    registerMutation.mutate({ data: form });
+  };
+
+  const handleServicesSubmit = async () => {
+    const allServices: ServiceConfig[] = [
+      ...PRESET_SERVICES.filter((s) => selectedServices[s.name]).map((s) => serviceConfigs[s.name]),
+      ...customServices,
+    ];
+
+    for (const service of allServices) {
+      await createServiceMutation.mutateAsync({ slug: shopSlug, data: service });
+    }
+    setStep("done");
+  };
+
+  const toggleService = (name: string) => {
+    setSelectedServices((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const updateServiceConfig = (name: string, field: "price" | "durationMinutes", value: number) => {
+    setServiceConfigs((prev) => ({
+      ...prev,
+      [name]: { ...prev[name], [field]: value },
+    }));
+  };
+
+  const addCustomService = () => {
+    setCustomServices((prev) => [...prev, { name: "", price: 100, durationMinutes: 30 }]);
+  };
+
+  const removeCustomService = (i: number) => {
+    setCustomServices((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  const updateCustomService = (i: number, field: keyof ServiceConfig, value: string | number) => {
+    setCustomServices((prev) =>
+      prev.map((s, idx) => (idx === i ? { ...s, [field]: value } : s))
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate("/")} className="text-slate-500 hover:text-slate-900 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center">
+              <Scissors className="w-3.5 h-3.5 text-slate-900" />
+            </div>
+            <span className="font-bold text-slate-900">SlotCut — Register Shop</span>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-2xl mx-auto px-4 py-10">
+        {/* Progress */}
+        <div className="flex items-center gap-4 mb-8">
+          {(["details", "services", "done"] as Step[]).map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
+                step === s
+                  ? "bg-amber-500 border-amber-500 text-slate-900"
+                  : (["details", "services", "done"].indexOf(step) > i)
+                  ? "bg-green-500 border-green-500 text-white"
+                  : "border-slate-300 text-slate-400"
+              }`}>
+                {(["details", "services", "done"].indexOf(step) > i) ? <Check className="w-3.5 h-3.5" /> : i + 1}
+              </div>
+              <span className={`text-xs font-medium capitalize ${step === s ? "text-slate-900" : "text-slate-400"}`}>
+                {s === "details" ? "Shop Details" : s === "services" ? "Services" : "Done"}
+              </span>
+              {i < 2 && <div className={`h-px w-8 ${(["details", "services", "done"].indexOf(step) > i) ? "bg-green-500" : "bg-slate-200"}`} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Step 1: Shop Details */}
+        {step === "details" && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+            <h2 className="text-xl font-bold text-slate-900 mb-6">Shop Details</h2>
+
+            {error && (
+              <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleDetailsSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Owner Name *</label>
+                  <input
+                    type="text"
+                    placeholder="Your full name"
+                    value={form.ownerName}
+                    onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Shop Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Raja Barbershop"
+                    value={form.shopName}
+                    onChange={(e) => setForm((f) => ({ ...f, shopName: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Phone Number *</label>
+                  <input
+                    type="tel"
+                    placeholder="10-digit mobile"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Password *</label>
+                  <input
+                    type="password"
+                    placeholder="Choose a password"
+                    value={form.password}
+                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">City *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Mumbai"
+                    value={form.city}
+                    onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Address</label>
+                  <input
+                    type="text"
+                    placeholder="Street address"
+                    value={form.address}
+                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Working Chairs *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={form.numChairs}
+                    onChange={(e) => setForm((f) => ({ ...f, numChairs: Number(e.target.value) }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Active Barbers *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={form.numBarbers}
+                    onChange={(e) => setForm((f) => ({ ...f, numBarbers: Number(e.target.value) }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Open Time</label>
+                  <input
+                    type="time"
+                    value={form.openTime}
+                    onChange={(e) => setForm((f) => ({ ...f, openTime: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Close Time</label>
+                  <input
+                    type="time"
+                    value={form.closeTime}
+                    onChange={(e) => setForm((f) => ({ ...f, closeTime: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={registerMutation.isPending}
+                className="w-full bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60 mt-4"
+              >
+                {registerMutation.isPending ? "Creating your shop..." : "Create Shop & Continue"}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Step 2: Services */}
+        {step === "services" && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Configure Services</h2>
+            <p className="text-slate-500 text-sm mb-6">Select the services you offer and set your prices.</p>
+
+            <div className="space-y-3 mb-6">
+              {PRESET_SERVICES.map((service) => (
+                <div key={service.name} className={`border rounded-lg p-4 transition-all cursor-pointer ${
+                  selectedServices[service.name]
+                    ? "border-amber-400 bg-amber-50"
+                    : "border-slate-200 hover:border-slate-300"
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleService(service.name)}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        selectedServices[service.name]
+                          ? "bg-amber-500 border-amber-500"
+                          : "border-slate-300"
+                      }`}
+                    >
+                      {selectedServices[service.name] && <Check className="w-3 h-3 text-slate-900" />}
+                    </button>
+                    <span
+                      className="flex-1 font-medium text-sm text-slate-900 cursor-pointer"
+                      onClick={() => toggleService(service.name)}
+                    >
+                      {service.name}
+                    </span>
+                    {selectedServices[service.name] && (
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500">₹</span>
+                          <input
+                            type="number"
+                            min={1}
+                            value={serviceConfigs[service.name].price}
+                            onChange={(e) => updateServiceConfig(service.name, "price", Number(e.target.value))}
+                            className="w-20 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-500">min</span>
+                          <input
+                            type="number"
+                            min={5}
+                            step={5}
+                            value={serviceConfigs[service.name].durationMinutes}
+                            onChange={(e) => updateServiceConfig(service.name, "durationMinutes", Number(e.target.value))}
+                            className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Custom Services */}
+            {customServices.map((service, i) => (
+              <div key={i} className="border border-amber-300 bg-amber-50 rounded-lg p-4 mb-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Service name"
+                    value={service.name}
+                    onChange={(e) => updateCustomService(i, "name", e.target.value)}
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500">₹</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={service.price}
+                      onChange={(e) => updateCustomService(i, "price", Number(e.target.value))}
+                      className="w-20 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-slate-500">min</span>
+                    <input
+                      type="number"
+                      min={5}
+                      step={5}
+                      value={service.durationMinutes}
+                      onChange={(e) => updateCustomService(i, "durationMinutes", Number(e.target.value))}
+                      className="w-16 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <button onClick={() => removeCustomService(i)} className="text-red-500 hover:text-red-700 p-1">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addCustomService}
+              className="flex items-center gap-2 text-sm text-amber-600 font-medium hover:text-amber-700 mb-6"
+            >
+              <Plus className="w-4 h-4" /> Add custom service
+            </button>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleServicesSubmit}
+                disabled={createServiceMutation.isPending}
+                className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
+              >
+                {createServiceMutation.isPending ? "Saving..." : "Save Services & Finish"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("done")}
+                className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Done */}
+        {step === "done" && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">You're all set!</h2>
+            <p className="text-slate-500 mb-6">
+              Your shop <strong>{shopName}</strong> is live. Share your booking link with customers.
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Your Booking Link</p>
+              <code className="text-sm text-amber-700 font-mono break-all">
+                {window.location.origin}/shop/{shopSlug}
+              </code>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => navigate(`/dashboard/${shopSlug}`)}
+                className="w-full bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors"
+              >
+                Go to Dashboard
+              </button>
+              <button
+                onClick={() => navigate(`/shop/${shopSlug}`)}
+                className="w-full border border-slate-300 text-slate-700 py-3 rounded-lg font-medium text-sm hover:border-slate-400 transition-colors"
+              >
+                View Shop Page
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
