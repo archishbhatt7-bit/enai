@@ -18,7 +18,7 @@ export default function Landing() {
       {/* Bottom — two big buttons */}
       <div className="w-full max-w-sm space-y-4">
         <button
-          onClick={() => navigate("/customer")}
+          onClick={() => navigate("/customer-login")}
           className="w-full flex items-center gap-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-900 rounded-2xl px-6 py-5 transition-all shadow-lg"
         >
           <div className="w-11 h-11 bg-slate-900/15 rounded-xl flex items-center justify-center flex-shrink-0">

@@ -1,11 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useListShops } from "@workspace/api-client-react";
-import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight } from "lucide-react";
+import { useCustomerAuth } from "@/lib/customerAuth";
+import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight, Star, LogOut } from "lucide-react";
 
 type Shop = NonNullable<ReturnType<typeof useListShops>["data"]>[number];
 
-function ShopCard({ shop, onClick }: { shop: Shop; onClick: () => void }) {
+function ShopCard({
+  shop,
+  isFav,
+  onToggleFav,
+  onClick,
+}: {
+  shop: Shop;
+  isFav: boolean;
+  onToggleFav: (e: React.MouseEvent) => void;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -40,7 +51,20 @@ function ShopCard({ shop, onClick }: { shop: Shop; onClick: () => void }) {
             </div>
           </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 mt-1 flex-shrink-0 transition-colors" />
+        <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+          <button
+            onClick={onToggleFav}
+            className={`p-1.5 rounded-lg transition-colors ${
+              isFav
+                ? "text-amber-500 bg-amber-50"
+                : "text-slate-300 hover:text-amber-400 hover:bg-amber-50"
+            }`}
+            title={isFav ? "Remove from favourites" : "Add to favourites"}
+          >
+            <Star className={`w-4 h-4 ${isFav ? "fill-amber-500" : ""}`} />
+          </button>
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+        </div>
       </div>
     </button>
   );
@@ -48,35 +72,76 @@ function ShopCard({ shop, onClick }: { shop: Shop; onClick: () => void }) {
 
 export default function CustomerHome() {
   const [, navigate] = useLocation();
+  const { phone, logoutCustomer, toggleFavourite, isFavourite, favourites } = useCustomerAuth();
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
 
-  const { data: shops, isLoading } = useListShops(
-    submitted ? { q: submitted } : {},
-    { query: { enabled: true } }
+  const { data: allShops = [], isLoading } = useListShops({}, { query: { enabled: true } });
+  const { data: searchResults, isLoading: searchLoading } = useListShops(
+    { q: submitted },
+    { query: { enabled: !!submitted } }
   );
+
+  const isSearching = !!submitted;
+  const displayShops = isSearching ? (searchResults ?? []) : allShops;
+  const loading = isSearching ? searchLoading : isLoading;
+
+  // Sort: favourites first (only when not searching)
+  const sorted = isSearching
+    ? displayShops
+    : [
+        ...displayShops.filter((s) => isFavourite(s.slug)),
+        ...displayShops.filter((s) => !isFavourite(s.slug)),
+      ];
+
+  useEffect(() => {
+    if (!phone) navigate("/customer-login");
+  }, [phone, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(query);
+    setSubmitted(query.trim());
   };
 
-  const label = submitted
-    ? `${shops?.length ?? 0} shop${shops?.length !== 1 ? "s" : ""} found`
-    : "All Shops";
+  const handleClearSearch = () => {
+    setQuery("");
+    setSubmitted("");
+  };
+
+  const handleFavToggle = (e: React.MouseEvent, slug: string) => {
+    e.stopPropagation();
+    toggleFavourite(slug);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Dark header */}
       <div className="bg-slate-900 px-5 pt-10 pb-8">
-        <button
-          onClick={() => navigate("/")}
-          className="text-slate-400 hover:text-white mb-5 flex items-center gap-1.5 text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-        <h1 className="text-2xl font-black text-white mb-1">Find a Barbershop</h1>
-        <p className="text-slate-400 text-sm">Search by shop name or city</p>
+        <div className="flex items-center justify-between mb-5">
+          <button
+            onClick={() => navigate("/")}
+            className="text-slate-400 hover:text-white flex items-center gap-1.5 text-sm transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400 text-xs">+91 {phone}</span>
+            <button
+              onClick={() => { logoutCustomer(); navigate("/"); }}
+              className="text-slate-500 hover:text-red-400 transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-black text-white mb-0.5">Find a Barbershop</h1>
+        <p className="text-slate-400 text-sm">
+          {favourites.length > 0
+            ? `${favourites.length} favourite${favourites.length !== 1 ? "s" : ""} saved`
+            : "Search by shop name or city"}
+        </p>
 
         <form onSubmit={handleSearch} className="mt-5 flex gap-2">
           <div className="flex-1 relative">
@@ -89,18 +154,28 @@ export default function CustomerHome() {
               className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:bg-white/15 focus:border-amber-500/50"
             />
           </div>
-          <button
-            type="submit"
-            className="bg-amber-500 text-slate-900 px-5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors flex-shrink-0"
-          >
-            Search
-          </button>
+          {isSearching ? (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="bg-slate-700 text-slate-300 px-4 rounded-xl font-semibold text-sm hover:bg-slate-600 transition-colors flex-shrink-0"
+            >
+              Clear
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="bg-amber-500 text-slate-900 px-5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors flex-shrink-0"
+            >
+              Search
+            </button>
+          )}
         </form>
       </div>
 
       {/* Results */}
       <div className="flex-1 px-4 py-5">
-        {isLoading && (
+        {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
@@ -108,7 +183,7 @@ export default function CustomerHome() {
           </div>
         )}
 
-        {submitted && !isLoading && shops && shops.length === 0 && (
+        {!loading && isSearching && sorted.length === 0 && (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-7 h-7 text-slate-400" />
@@ -118,14 +193,43 @@ export default function CustomerHome() {
           </div>
         )}
 
-        {!isLoading && shops && shops.length > 0 && (
+        {!loading && sorted.length > 0 && (
           <div className="space-y-3">
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider px-1 mb-3">
-              {label}
-            </p>
-            {shops.map((shop) => (
-              <ShopCard key={shop.id} shop={shop} onClick={() => navigate(`/shop/${shop.slug}`)} />
-            ))}
+            {/* Favourites section header */}
+            {!isSearching && favourites.length > 0 && (
+              <div className="flex items-center gap-2 px-1 mb-1">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                <p className="text-xs text-amber-600 font-bold uppercase tracking-wider">
+                  Favourites
+                </p>
+              </div>
+            )}
+
+            {sorted.map((shop, idx) => {
+              // Insert "Other Shops" divider when switching from favs to rest
+              const showDivider =
+                !isSearching &&
+                favourites.length > 0 &&
+                idx === favourites.length;
+
+              return (
+                <div key={shop.slug}>
+                  {showDivider && (
+                    <div className="flex items-center gap-2 px-1 mt-4 mb-1">
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                        Other Shops
+                      </p>
+                    </div>
+                  )}
+                  <ShopCard
+                    shop={shop}
+                    isFav={isFavourite(shop.slug)}
+                    onToggleFav={(e) => handleFavToggle(e, shop.slug)}
+                    onClick={() => navigate(`/shop/${shop.slug}`)}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -142,7 +142,7 @@ export default function ShopPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-xl font-bold text-slate-900">Shop not found</h1>
-          <button onClick={() => navigate("/")} className="mt-4 text-amber-600 font-medium text-sm">
+          <button onClick={() => navigate("/customer")} className="mt-4 text-amber-600 font-medium text-sm">
             Back to home
           </button>
         </div>
@@ -156,7 +156,7 @@ export default function ShopPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate("/")} className="text-slate-500 hover:text-slate-900">
+          <button onClick={() => navigate("/customer")} className="text-slate-500 hover:text-slate-900">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 flex-1 min-w-0">

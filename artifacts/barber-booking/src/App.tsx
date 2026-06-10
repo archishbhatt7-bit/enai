@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
+import { CustomerAuthProvider } from "@/lib/customerAuth";
 import Landing from "@/pages/Landing";
+import CustomerLogin from "@/pages/CustomerLogin";
 import CustomerHome from "@/pages/CustomerHome";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
@@ -24,6 +26,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/customer" component={CustomerHome} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
@@ -38,12 +41,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
+        <CustomerAuthProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </CustomerAuthProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

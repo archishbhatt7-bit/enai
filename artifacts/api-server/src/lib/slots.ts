@@ -4,7 +4,7 @@ import { eq, and } from "drizzle-orm";
 
 const BUFFER_MINUTES = 10;
 const ADVANCE_BOOKING_HOURS = 2;
-const SLOT_INTERVAL_MINUTES = 15;
+const SLOT_INTERVAL_MINUTES = 30;
 
 export interface SlotInfo {
   time: string;
