@@ -1789,6 +1789,74 @@ export const getRevenueStats = async (slug: string, options?: RequestInit): Prom
 
 
 
+// ── Customer upcoming bookings ────────────────────────────────────────────────
+
+export interface CustomerUpcomingBooking {
+  id: number;
+  shopName: string;
+  shopSlug: string;
+  shopCity: string;
+  serviceName: string;
+  slotDate: string;
+  slotTime: string;
+  slotEndTime: string;
+  status: string;
+  arrivalOtp: string | null;
+}
+
+export const getCustomerBookingsUrl = (phone: string) =>
+  `/api/customer/bookings?phone=${encodeURIComponent(phone)}`;
+
+export const getCustomerBookings = async (
+  phone: string,
+  options?: RequestInit
+): Promise<CustomerUpcomingBooking[]> =>
+  customFetch<CustomerUpcomingBooking[]>(getCustomerBookingsUrl(phone), options);
+
+export const getGetCustomerBookingsQueryKey = (phone: string) =>
+  [`/api/customer/bookings`, phone] as const;
+
+export const getGetCustomerBookingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerBookings>>,
+  TError = ErrorType<unknown>
+>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCustomerBookings>>,
+      TError,
+      TData
+    >;
+  }
+) => {
+  const { query: queryOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetCustomerBookingsQueryKey(phone);
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerBookings>>
+  > = () => getCustomerBookings(phone);
+  return { queryKey, queryFn, enabled: !!phone, ...queryOptions };
+};
+
+export const useGetCustomerBookings = <
+  TData = Awaited<ReturnType<typeof getCustomerBookings>>,
+  TError = ErrorType<unknown>
+>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCustomerBookings>>,
+      TError,
+      TData
+    >;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getGetCustomerBookingsQueryOptions(phone, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  return { ...query, queryKey: queryOptions.queryKey };
+};
+
 export const getGetRevenueStatsQueryKey = (slug: string,) => {
     return [
     `/api/shops/${slug}/revenue`

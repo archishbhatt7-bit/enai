@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, shopsTable, servicesTable, bookingsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getAvailableSlots, assignChair, addMinutes } from "../lib/slots";
 import { generateOtp } from "../lib/auth";
 
@@ -326,6 +326,67 @@ router.get("/shops/:slug/revenue", async (req, res) => {
       revenue: dayBookings.reduce((sum, b) => sum + b.amountPaid, 0),
     });
   }
+
+  return res.json(result);
+});
+
+// GET /customer/bookings?phone=XXXXXXXXXX — upcoming bookings for a customer
+router.get("/customer/bookings", async (req, res) => {
+  const phone = (req.query.phone as string)?.trim();
+  if (!phone) return res.status(400).json({ error: "phone required" });
+
+  const today = new Date().toISOString().split("T")[0];
+  const nowTime = new Date().toTimeString().slice(0, 5); // "HH:MM"
+
+  const rows = await db
+    .select()
+    .from(bookingsTable)
+    .where(eq(bookingsTable.customerPhone, phone));
+
+  // Filter future bookings only (skip cancelled / no_show / completed)
+  const active = ["confirmed", "pending", "active"];
+  const upcoming = rows.filter((b) => {
+    if (!active.includes(b.status)) return false;
+    if (b.slotDate > today) return true;
+    if (b.slotDate === today) return b.slotTime >= nowTime;
+    return false;
+  });
+
+  // Enrich with shop info
+  const shopIds = [...new Set(upcoming.map((b) => b.shopId))];
+  const shops = shopIds.length
+    ? await db.select().from(shopsTable).where(
+        shopIds.length === 1
+          ? eq(shopsTable.id, shopIds[0])
+          : inArray(shopsTable.id, shopIds)
+      )
+    : [];
+  const shopMap = Object.fromEntries(shops.map((s) => [s.id, s]));
+
+  const serviceIds = [...new Set(upcoming.map((b) => b.serviceId))];
+  const services = serviceIds.length
+    ? await db.select().from(servicesTable).where(
+        serviceIds.length === 1
+          ? eq(servicesTable.id, serviceIds[0])
+          : inArray(servicesTable.id, serviceIds)
+      )
+    : [];
+  const serviceMap = Object.fromEntries(services.map((s) => [s.id, s]));
+
+  const result = upcoming
+    .sort((a, b) => (a.slotDate + a.slotTime).localeCompare(b.slotDate + b.slotTime))
+    .map((b) => ({
+      id: b.id,
+      shopName: shopMap[b.shopId]?.shopName ?? "Shop",
+      shopSlug: shopMap[b.shopId]?.slug ?? "",
+      shopCity: shopMap[b.shopId]?.city ?? "",
+      serviceName: serviceMap[b.serviceId]?.name ?? "",
+      slotDate: b.slotDate,
+      slotTime: b.slotTime,
+      slotEndTime: b.slotEndTime,
+      status: b.status,
+      arrivalOtp: b.arrivalOtp,
+    }));
 
   return res.json(result);
 });

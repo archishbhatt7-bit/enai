@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useListShops } from "@workspace/api-client-react";
+import { useListShops, useGetCustomerBookings } from "@workspace/api-client-react";
 import { useCustomerAuth } from "@/lib/customerAuth";
-import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight, Star, LogOut } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight, Star, LogOut, Calendar, Clock } from "lucide-react";
 
 type Shop = NonNullable<ReturnType<typeof useListShops>["data"]>[number];
 
@@ -70,11 +70,20 @@ function ShopCard({
   );
 }
 
+function formatDisplayDate(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+
 export default function CustomerHome() {
   const [, navigate] = useLocation();
   const { phone, logoutCustomer, toggleFavourite, isFavourite, favourites } = useCustomerAuth();
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
+
+  const { data: upcomingBookings = [] } = useGetCustomerBookings(phone ?? "", {
+    query: { enabled: !!phone, refetchInterval: 60_000 },
+  });
 
   const { data: allShops = [], isLoading } = useListShops({}, { query: { enabled: true } });
   const { data: searchResults, isLoading: searchLoading } = useListShops(
@@ -172,6 +181,44 @@ export default function CustomerHome() {
           )}
         </form>
       </div>
+
+      {/* Upcoming Bookings Banner */}
+      {upcomingBookings.length > 0 && (
+        <div className="px-4 pt-4 pb-1 space-y-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" /> Your Upcoming Appointments
+          </p>
+          {upcomingBookings.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => navigate(`/shop/${b.shopSlug}`)}
+              className="w-full text-left bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 hover:bg-amber-100 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+                <Scissors className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-slate-900 text-sm truncate">{b.shopName}</p>
+                <p className="text-xs text-slate-500 truncate">{b.serviceName} · {b.shopCity}</p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
+                    <Calendar className="w-3 h-3" /> {formatDisplayDate(b.slotDate)}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
+                    <Clock className="w-3 h-3" /> {b.slotTime} – {b.slotEndTime}
+                  </span>
+                </div>
+              </div>
+              {b.arrivalOtp && (
+                <div className="flex-shrink-0 text-center">
+                  <p className="text-xs text-slate-400 leading-none mb-1">OTP</p>
+                  <p className="text-lg font-black text-slate-900 tracking-widest leading-none">{b.arrivalOtp}</p>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Results */}
       <div className="flex-1 px-4 py-5">
