@@ -1481,6 +1481,57 @@ export const useMarkNoShow = <TError = ErrorType<unknown>,
       return useMutation(getMarkNoShowMutationOptions(options));
     }
 
+export const getUndoNoShowUrl = (slug: string,
+    bookingId: number,) => {
+  return `/api/shops/${slug}/bookings/${bookingId}/undo-no-show`
+}
+
+/**
+ * @summary Undo a no-show, restoring booking to confirmed
+ */
+export const undoNoShow = async (slug: string,
+    bookingId: number, options?: RequestInit): Promise<Booking> => {
+  return customFetch<Booking>(getUndoNoShowUrl(slug, bookingId), {
+    ...options,
+    method: 'POST',
+  });
+}
+
+export const getUndoNoShowMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof undoNoShow>>, TError,{slug: string;bookingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof undoNoShow>>, TError,{slug: string;bookingId: number}, TContext> => {
+const mutationKey = ['undoNoShow'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: {mutationKey}, request: undefined};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof undoNoShow>>, {slug: string;bookingId: number}> = (props) => {
+    const {slug, bookingId} = props ?? {};
+    return undoNoShow(slug, bookingId, requestOptions);
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type UndoNoShowMutationResult = NonNullable<Awaited<ReturnType<typeof undoNoShow>>>
+export type UndoNoShowMutationError = ErrorType<unknown>
+
+/**
+ * @summary Undo a no-show
+ */
+export const useUndoNoShow = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof undoNoShow>>, TError,{slug: string;bookingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof undoNoShow>>,
+        TError,
+        {slug: string;bookingId: number},
+        TContext
+      > => {
+      return useMutation(getUndoNoShowMutationOptions(options));
+    }
+
 export const getCompleteBookingUrl = (slug: string,
     bookingId: number,) => {
 

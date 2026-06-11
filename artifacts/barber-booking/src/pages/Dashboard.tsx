@@ -9,6 +9,7 @@ import {
   useUpdateShopStatus,
   useVerifyArrivalOtp,
   useMarkNoShow,
+  useUndoNoShow,
   useCompleteBooking,
   getGetTimelineQueryKey,
   getListBookingsQueryKey,
@@ -279,6 +280,16 @@ export default function Dashboard() {
   });
 
   const noShowMutation = useMarkNoShow({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetTimelineQueryKey(slug, selectedDate) });
+        queryClient.invalidateQueries({ queryKey: getListBookingsQueryKey(slug) });
+        queryClient.invalidateQueries({ queryKey: getGetShopDashboardQueryKey(slug) });
+      },
+    },
+  });
+
+  const undoNoShowMutation = useUndoNoShow({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetTimelineQueryKey(slug, selectedDate) });
@@ -628,6 +639,15 @@ export default function Dashboard() {
                                     className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors flex items-center gap-1"
                                   >
                                     <CheckCircle className="w-3.5 h-3.5" /> Complete
+                                  </button>
+                                )}
+                                {booking.status === "no_show" && (
+                                  <button
+                                    onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
+                                    disabled={undoNoShowMutation.isPending}
+                                    className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" /> Undo No-show
                                   </button>
                                 )}
                               </div>

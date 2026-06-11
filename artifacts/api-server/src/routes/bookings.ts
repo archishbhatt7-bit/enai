@@ -194,6 +194,23 @@ router.post("/shops/:slug/bookings/:bookingId/no-show", async (req, res) => {
   return res.json(serializeBooking(updated, services[0]));
 });
 
+// POST /shops/:slug/bookings/:bookingId/undo-no-show
+router.post("/shops/:slug/bookings/:bookingId/undo-no-show", async (req, res) => {
+  const { slug, bookingId } = req.params;
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+
+  const [updated] = await db
+    .update(bookingsTable)
+    .set({ status: "confirmed" })
+    .where(and(eq(bookingsTable.id, Number(bookingId)), eq(bookingsTable.shopId, shops[0].id), eq(bookingsTable.status, "no_show")))
+    .returning();
+
+  if (!updated) return res.status(404).json({ error: "Booking not found or not a no-show" });
+  const services = await db.select().from(servicesTable).where(eq(servicesTable.id, updated.serviceId));
+  return res.json(serializeBooking(updated, services[0]));
+});
+
 // POST /shops/:slug/bookings/:bookingId/complete
 router.post("/shops/:slug/bookings/:bookingId/complete", async (req, res) => {
   const { slug, bookingId } = req.params;
