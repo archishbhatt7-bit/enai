@@ -29,7 +29,6 @@ import {
   Clock,
   TrendingUp,
   Users,
-  DollarSign,
   AlertTriangle,
   ChevronRight,
 } from "lucide-react";
@@ -42,10 +41,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-function timeToMinutes(time: string) {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-blue-100 text-blue-700 border-blue-200",
@@ -63,6 +58,140 @@ const TIMELINE_COLORS: Record<string, string> = {
   no_show: "bg-red-300",
   pending: "bg-amber-400",
 };
+
+const CLOCK_COLORS: Record<string, string> = {
+  confirmed: "#60a5fa",
+  active: "#22c55e",
+  completed: "#94a3b8",
+  no_show: "#f87171",
+  pending: "#fbbf24",
+};
+
+function timeToAngleDeg(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return (((h % 12) * 60 + m) / 720) * 360;
+}
+
+function ClockDial({
+  chair,
+  selectedDate,
+  today,
+}: {
+  chair: { chairNumber: number; bookings: any[] };
+  selectedDate: string;
+  today: string;
+}) {
+  const cx = 80, cy = 80, r = 62, innerR = 11;
+
+  function polar(angleDeg: number, radius: number) {
+    const rad = ((angleDeg - 90) * Math.PI) / 180;
+    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
+  }
+
+  function pieSlice(startDeg: number, endDeg: number): string {
+    if (endDeg - startDeg >= 360) endDeg = startDeg + 359.9;
+    const s = polar(startDeg, r);
+    const e = polar(endDeg, r);
+    const largeArc = endDeg - startDeg > 180 ? 1 : 0;
+    return `M ${cx} ${cy} L ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)} Z`;
+  }
+
+  const HOUR_LABELS: Record<number, string> = { 0: "12", 90: "3", 180: "6", 270: "9" };
+
+  const now = new Date();
+  const nowAngle = timeToAngleDeg(
+    `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
+  );
+  const handEnd = polar(nowAngle, r * 0.68);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <svg width="100%" viewBox="0 0 160 170" className="max-w-[160px]">
+        {/* Clock face */}
+        <circle cx={cx} cy={cy} r={r} fill="white" stroke="#e2e8f0" strokeWidth="2" />
+
+        {/* Hour ticks + numbers */}
+        {Array.from({ length: 12 }, (_, i) => {
+          const angle = i * 30;
+          const major = i % 3 === 0;
+          const outer = polar(angle, r - 3);
+          const inner = polar(angle, major ? r - 14 : r - 8);
+          const numPos = major ? polar(angle, r - 23) : null;
+          return (
+            <g key={i}>
+              <line
+                x1={inner.x.toFixed(2)} y1={inner.y.toFixed(2)}
+                x2={outer.x.toFixed(2)} y2={outer.y.toFixed(2)}
+                stroke={major ? "#94a3b8" : "#cbd5e1"}
+                strokeWidth={major ? 2.5 : 1}
+                strokeLinecap="round"
+              />
+              {numPos && (
+                <text
+                  x={numPos.x.toFixed(2)} y={numPos.y.toFixed(2)}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize="12" fontWeight="700" fill="#64748b"
+                >
+                  {HOUR_LABELS[angle]}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Booking pie slices */}
+        {chair.bookings.map((b) => {
+          let startA = timeToAngleDeg(b.slotTime);
+          let endA = timeToAngleDeg(b.slotEndTime);
+          if (endA <= startA) endA += 360;
+          const color = CLOCK_COLORS[b.status] ?? "#94a3b8";
+          return (
+            <path key={b.id} d={pieSlice(startA, endA)} fill={color} opacity="0.85">
+              <title>{b.customerName} — {b.service?.name ?? ""} ({b.slotTime}–{b.slotEndTime})</title>
+            </path>
+          );
+        })}
+
+        {/* Centre cap */}
+        <circle cx={cx} cy={cy} r={innerR} fill="white" stroke="#e2e8f0" strokeWidth="2" />
+
+        {/* Current-time hand (today only) */}
+        {selectedDate === today && (
+          <>
+            <line
+              x1={cx} y1={cy}
+              x2={handEnd.x.toFixed(2)} y2={handEnd.y.toFixed(2)}
+              stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" opacity="0.9"
+            />
+            <circle cx={handEnd.x.toFixed(2)} cy={handEnd.y.toFixed(2)} r="3.5" fill="#ef4444" />
+          </>
+        )}
+
+        {/* Chair number below clock */}
+        <text x={cx} y={158} textAnchor="middle" fontSize="12" fontWeight="700" fill="#475569">
+          Chair {chair.chairNumber}
+        </text>
+      </svg>
+
+      {/* Booking time chips */}
+      <div className="flex gap-1 flex-wrap justify-center min-h-[20px]">
+        {chair.bookings.length === 0 ? (
+          <span className="text-xs text-slate-300 font-medium">Free</span>
+        ) : (
+          chair.bookings.map((b) => (
+            <span
+              key={b.id}
+              className="text-xs px-1.5 py-0.5 rounded font-semibold text-white"
+              style={{ backgroundColor: CLOCK_COLORS[b.status] ?? "#94a3b8" }}
+            >
+              {b.slotTime}
+            </span>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 function playAlert() {
   try {
@@ -198,9 +327,6 @@ export default function Dashboard() {
 
   const openTime = timeline?.openTime ?? "09:00";
   const closeTime = timeline?.closeTime ?? "20:00";
-  const openMins = timeToMinutes(openTime);
-  const closeMins = timeToMinutes(closeTime);
-  const totalMins = closeMins - openMins;
 
   const revenueData = revenue?.map((r) => ({
     date: r.date.slice(5),
@@ -327,10 +453,9 @@ export default function Dashboard() {
                 {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
               </div>
             ) : dashboard && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
                   { label: "Today's Bookings", value: dashboard.todayBookings, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-                  { label: "Today's Revenue", value: `₹${dashboard.todayRevenue}`, icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
                   { label: "Active Slots", value: dashboard.activeSlots, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
                   { label: "Available Chairs", value: dashboard.availableChairs, icon: TrendingUp, color: "text-slate-600", bg: "bg-slate-100" },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
@@ -387,87 +512,45 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Visual Chair Timeline */}
+                {/* Clock Dial Grid */}
                 {activeTab === "timeline" && (
                   <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-slate-900 text-sm">Chair Timeline</h3>
-                      <p className="text-xs text-slate-400">{openTime} – {closeTime}</p>
+                      <h3 className="font-semibold text-slate-900 text-sm">Chair Clocks</h3>
+                      <div className="flex items-center gap-2">
+                        {[
+                          { label: "Confirmed", color: "#60a5fa" },
+                          { label: "Active", color: "#22c55e" },
+                          { label: "Done", color: "#94a3b8" },
+                          { label: "No-show", color: "#f87171" },
+                        ].map(({ label, color }) => (
+                          <span key={label} className="flex items-center gap-1 text-xs text-slate-500">
+                            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+                            {label}
+                          </span>
+                        ))}
+                      </div>
                     </div>
 
                     {timelineLoading ? (
-                      <div className="p-5 space-y-4">
-                        {[1,2,3].map(i => <div key={i} className="h-16 bg-slate-50 rounded-lg animate-pulse" />)}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 p-6">
+                        {[1,2,3,4,5,6].map(i => (
+                          <div key={i} className="flex flex-col items-center gap-2">
+                            <div className="w-full aspect-square max-w-[160px] rounded-full bg-slate-100 animate-pulse" />
+                            <div className="h-3 w-16 bg-slate-100 rounded animate-pulse" />
+                          </div>
+                        ))}
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <div className="min-w-[560px] p-5">
-                          {/* Hour labels */}
-                          <div className="flex mb-3 ml-20">
-                            {Array.from({ length: Math.ceil(totalMins / 60) + 1 }).map((_, i) => {
-                              const h = Math.floor(openMins / 60) + i;
-                              return (
-                                <div
-                                  key={h}
-                                  className="text-xs text-slate-300 font-medium"
-                                  style={{ width: `${(60 / totalMins) * 100}%` }}
-                                >
-                                  {String(h).padStart(2, "0")}:00
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Chair rows */}
-                          {timeline?.chairs.map((chair) => (
-                            <div key={chair.chairNumber} className="flex items-center gap-3 mb-3">
-                              <div className="w-16 flex-shrink-0 text-right">
-                                <span className="text-xs font-semibold text-slate-500">Chair {chair.chairNumber}</span>
-                              </div>
-                              <div className="flex-1 h-12 bg-slate-50 rounded-lg relative border border-slate-100 overflow-hidden">
-                                {/* Grid lines */}
-                                {Array.from({ length: Math.ceil(totalMins / 60) }).map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className="absolute top-0 bottom-0 border-l border-slate-200"
-                                    style={{ left: `${(i * 60 / totalMins) * 100}%` }}
-                                  />
-                                ))}
-                                {/* Booking blocks */}
-                                {chair.bookings.map((booking) => {
-                                  const start = timeToMinutes(booking.slotTime) - openMins;
-                                  const end = timeToMinutes(booking.slotEndTime) - openMins;
-                                  const left = (start / totalMins) * 100;
-                                  const width = ((end - start) / totalMins) * 100;
-                                  return (
-                                    <div
-                                      key={booking.id}
-                                      className={`absolute top-1 bottom-1 rounded ${TIMELINE_COLORS[booking.status] ?? "bg-slate-300"} flex flex-col justify-center px-1.5 overflow-hidden`}
-                                      style={{ left: `${left}%`, width: `${width}%` }}
-                                      title={`${booking.customerName} - ${booking.service?.name ?? ""} (${booking.slotTime})`}
-                                    >
-                                      <p className="text-white text-xs font-semibold truncate leading-tight">{booking.customerName}</p>
-                                      <p className="text-white/70 text-xs truncate">{booking.slotTime}</p>
-                                    </div>
-                                  );
-                                })}
-                                {/* Current time indicator */}
-                                {selectedDate === today && (() => {
-                                  const now = new Date();
-                                  const nowMins = now.getHours() * 60 + now.getMinutes() - openMins;
-                                  const pos = (nowMins / totalMins) * 100;
-                                  if (pos < 0 || pos > 100) return null;
-                                  return (
-                                    <div
-                                      className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
-                                      style={{ left: `${pos}%` }}
-                                    />
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 p-6">
+                        {timeline?.chairs.map((chair) => (
+                          <ClockDial
+                            key={chair.chairNumber}
+                            chair={chair}
+                            selectedDate={selectedDate}
+                            today={today}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
