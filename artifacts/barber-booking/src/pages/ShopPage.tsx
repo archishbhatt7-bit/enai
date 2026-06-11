@@ -17,7 +17,9 @@ import {
   Check,
   Phone,
   User,
+  Image as ImageIcon,
 } from "lucide-react";
+import { photoUrl } from "@/components/ImageUpload";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -179,6 +181,17 @@ export default function ShopPage() {
         </div>
       </header>
 
+      {/* Profile photo banner */}
+      {(shop as any).profilePhoto && (
+        <div className="w-full max-w-lg mx-auto overflow-hidden" style={{ height: 180 }}>
+          <img
+            src={photoUrl((shop as any).profilePhoto)}
+            alt={shop.shopName}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
       <div className="max-w-lg mx-auto px-4 py-6">
         {/* Booking steps indicator */}
         {step !== "confirm" && (
@@ -259,6 +272,42 @@ export default function ShopPage() {
               <p className="text-sm text-slate-700 font-medium">{shop.openTime} – {shop.closeTime}</p>
               <p className="text-xs text-slate-400 mt-1">{shop.numChairs} chair{shop.numChairs !== 1 ? "s" : ""} • {shop.numBarbers} barber{shop.numBarbers !== 1 ? "s" : ""}</p>
             </div>
+
+            {/* Interior photos gallery */}
+            {((shop as any).interiorPhotos as string[] | null)?.length ? (
+              <div className="mt-6">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Inside the Salon</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {((shop as any).interiorPhotos as string[]).map((p, i) => (
+                    <img
+                      key={i}
+                      src={photoUrl(p)}
+                      alt={`interior-${i}`}
+                      className="w-32 h-24 object-cover rounded-lg flex-shrink-0 border border-slate-200"
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Portfolio / work showcase */}
+            {((shop as any).portfolioPhotos as string[] | null)?.length ? (
+              <div className="mt-6">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                  <ImageIcon className="w-3.5 h-3.5 inline mr-1" />Our Work
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {((shop as any).portfolioPhotos as string[]).map((p, i) => (
+                    <img
+                      key={i}
+                      src={photoUrl(p)}
+                      alt={`portfolio-${i}`}
+                      className="aspect-square object-cover rounded-lg border border-slate-200 w-full"
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 

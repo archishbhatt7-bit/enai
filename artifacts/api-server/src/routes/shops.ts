@@ -221,4 +221,65 @@ router.get("/shops/:slug/dashboard", async (req, res) => {
   });
 });
 
+// PATCH /shops/:slug/photos — update profile photo + interior photos
+router.patch("/shops/:slug/photos", async (req, res) => {
+  const { slug } = req.params;
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+
+  const { profilePhoto, interiorPhotos } = req.body as {
+    profilePhoto?: string;
+    interiorPhotos?: string[];
+  };
+
+  const update: Record<string, unknown> = {};
+  if (profilePhoto !== undefined) update.profilePhoto = profilePhoto;
+  if (interiorPhotos !== undefined) update.interiorPhotos = interiorPhotos;
+
+  const [updated] = await db
+    .update(shopsTable)
+    .set(update)
+    .where(eq(shopsTable.id, shop.id))
+    .returning();
+
+  const { passwordHash: _, ...safe } = updated;
+  return res.json({ ...safe, createdAt: safe.createdAt.toISOString(), pausedUntil: safe.pausedUntil?.toISOString() ?? null });
+});
+
+// POST /shops/:slug/portfolio — append a portfolio photo
+router.post("/shops/:slug/portfolio", async (req, res) => {
+  const { slug } = req.params;
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+
+  const { photoPath } = req.body as { photoPath: string };
+  if (!photoPath) return res.status(400).json({ error: "photoPath is required" });
+
+  const current = (shop.portfolioPhotos ?? []) as string[];
+  const updated = [...current, photoPath];
+
+  await db.update(shopsTable).set({ portfolioPhotos: updated }).where(eq(shopsTable.id, shop.id));
+  return res.json({ portfolioPhotos: updated });
+});
+
+// DELETE /shops/:slug/portfolio/:index — remove a portfolio photo by index
+router.delete("/shops/:slug/portfolio/:index", async (req, res) => {
+  const { slug, index } = req.params;
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+
+  const idx = parseInt(index, 10);
+  const current = (shop.portfolioPhotos ?? []) as string[];
+  if (isNaN(idx) || idx < 0 || idx >= current.length) {
+    return res.status(400).json({ error: "Invalid index" });
+  }
+
+  const updated = current.filter((_, i) => i !== idx);
+  await db.update(shopsTable).set({ portfolioPhotos: updated }).where(eq(shopsTable.id, shop.id));
+  return res.json({ portfolioPhotos: updated });
+});
+
 export default router;

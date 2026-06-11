@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -18,6 +18,9 @@ export const shopsTable = pgTable("shops", {
   pausedUntil: timestamp("paused_until"),
   openTime: text("open_time").notNull().default("09:00"),
   closeTime: text("close_time").notNull().default("20:00"),
+  profilePhoto: text("profile_photo"),
+  interiorPhotos: json("interior_photos").$type<string[]>().default([]),
+  portfolioPhotos: json("portfolio_photos").$type<string[]>().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

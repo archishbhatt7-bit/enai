@@ -11,6 +11,7 @@ import {
   useMarkNoShow,
   useUndoNoShow,
   useCompleteBooking,
+  useGetShop,
   getGetTimelineQueryKey,
   getListBookingsQueryKey,
   getGetShopDashboardQueryKey,
@@ -32,7 +33,10 @@ import {
   Users,
   AlertTriangle,
   ChevronRight,
+  Camera,
+  Trash2,
 } from "lucide-react";
+import ImageUpload, { photoUrl } from "@/components/ImageUpload";
 import {
   BarChart,
   Bar,
@@ -220,7 +224,11 @@ export default function Dashboard() {
   const [otpInputs, setOtpInputs] = useState<Record<number, string>>({});
   const [otpErrors, setOtpErrors] = useState<Record<number, string>>({});
   const prevBookingCount = useRef<number>(0);
-  const [activeTab, setActiveTab] = useState<"timeline" | "bookings">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "bookings" | "photos">("timeline");
+  const [portfolioUploading, setPortfolioUploading] = useState(false);
+  const [portfolioError, setPortfolioError] = useState("");
+  const [interiorPaths, setInteriorPaths] = useState<string[] | null>(null);
+  const [profilePath, setProfilePath] = useState<string | null | undefined>(undefined);
 
   // Redirect if not authenticated or wrong shop
   useEffect(() => {
@@ -255,6 +263,8 @@ export default function Dashboard() {
   });
 
   const { data: revenue } = useGetRevenueStats(slug);
+
+  const { data: shopProfile, refetch: refetchShopProfile } = useGetShop(slug);
 
   const updateStatusMutation = useUpdateShopStatus({
     mutation: {
@@ -486,7 +496,7 @@ export default function Dashboard() {
               <div className="xl:col-span-2">
                 {/* Tabs */}
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg mb-4 w-fit">
-                  {(["timeline", "bookings"] as const).map((tab) => (
+                  {(["timeline", "bookings", "photos"] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -494,7 +504,7 @@ export default function Dashboard() {
                         activeTab === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                       }`}
                     >
-                      {tab}
+                      {tab === "photos" ? "📸 Photos" : tab}
                     </button>
                   ))}
                 </div>
@@ -656,6 +666,179 @@ export default function Dashboard() {
                         ))}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Photos tab */}
+                {activeTab === "photos" && (
+                  <div className="space-y-6">
+                    {portfolioError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                        {portfolioError}
+                      </div>
+                    )}
+
+                    {/* Profile Photo */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                      <h3 className="font-semibold text-slate-900 text-sm mb-4 flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-amber-500" /> Profile / Cover Photo
+                      </h3>
+                      <ImageUpload
+                        label="Main shop photo"
+                        multiple={false}
+                        maxFiles={1}
+                        existingPaths={
+                          profilePath !== undefined
+                            ? (profilePath ? [profilePath] : [])
+                            : (shopProfile?.shop as any)?.profilePhoto
+                            ? [(shopProfile.shop as any).profilePhoto]
+                            : []
+                        }
+                        onUploaded={async (paths) => {
+                          setPortfolioError("");
+                          try {
+                            await fetch(`/api/shops/${slug}/photos`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ profilePhoto: paths[0] }),
+                            });
+                            setProfilePath(paths[0]);
+                            refetchShopProfile();
+                          } catch {
+                            setPortfolioError("Failed to save profile photo.");
+                          }
+                        }}
+                        onRemove={async () => {
+                          setPortfolioError("");
+                          try {
+                            await fetch(`/api/shops/${slug}/photos`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ profilePhoto: null }),
+                            });
+                            setProfilePath(null);
+                            refetchShopProfile();
+                          } catch {
+                            setPortfolioError("Failed to remove profile photo.");
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Interior Photos */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                      <h3 className="font-semibold text-slate-900 text-sm mb-4 flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-amber-500" /> Interior / Salon Photos
+                      </h3>
+                      {(() => {
+                        const current: string[] = interiorPaths !== null
+                          ? interiorPaths
+                          : (((shopProfile?.shop as any)?.interiorPhotos as string[]) ?? []);
+                        return (
+                          <ImageUpload
+                            label="Salon interior photos"
+                            multiple
+                            maxFiles={6}
+                            existingPaths={current}
+                            onUploaded={async (paths) => {
+                              const updated = [...current, ...paths].slice(0, 6);
+                              setPortfolioError("");
+                              try {
+                                await fetch(`/api/shops/${slug}/photos`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ interiorPhotos: updated }),
+                                });
+                                setInteriorPaths(updated);
+                                refetchShopProfile();
+                              } catch {
+                                setPortfolioError("Failed to save interior photos.");
+                              }
+                            }}
+                            onRemove={async (i) => {
+                              const updated = current.filter((_, idx) => idx !== i);
+                              setPortfolioError("");
+                              try {
+                                await fetch(`/api/shops/${slug}/photos`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ interiorPhotos: updated }),
+                                });
+                                setInteriorPaths(updated);
+                                refetchShopProfile();
+                              } catch {
+                                setPortfolioError("Failed to remove photo.");
+                              }
+                            }}
+                          />
+                        );
+                      })()}
+                    </div>
+
+                    {/* Portfolio Photos */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                      <h3 className="font-semibold text-slate-900 text-sm mb-1 flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-amber-500" /> Portfolio / Work Showcase
+                      </h3>
+                      <p className="text-xs text-slate-400 mb-4">Hairstyles and your best work. Customers see this before booking.</p>
+                      {(() => {
+                        const portfolioPaths: string[] = ((shopProfile?.shop as any)?.portfolioPhotos as string[]) ?? [];
+                        return (
+                          <>
+                            {portfolioPaths.length > 0 && (
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
+                                {portfolioPaths.map((p, i) => (
+                                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                                    <img src={photoUrl(p)} alt={`portfolio-${i}`} className="w-full h-full object-cover" />
+                                    <button
+                                      onClick={async () => {
+                                        setPortfolioError("");
+                                        try {
+                                          await fetch(`/api/shops/${slug}/portfolio/${i}`, { method: "DELETE" });
+                                          refetchShopProfile();
+                                        } catch {
+                                          setPortfolioError("Failed to delete photo.");
+                                        }
+                                      }}
+                                      className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Trash2 className="w-4 h-4 text-white" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <ImageUpload
+                              label="Add portfolio photos"
+                              multiple
+                              maxFiles={20 - portfolioPaths.length}
+                              existingPaths={[]}
+                              onUploaded={async (paths) => {
+                                setPortfolioError("");
+                                setPortfolioUploading(true);
+                                try {
+                                  for (const p of paths) {
+                                    await fetch(`/api/shops/${slug}/portfolio`, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ photoPath: p }),
+                                    });
+                                  }
+                                  refetchShopProfile();
+                                } catch {
+                                  setPortfolioError("Failed to save portfolio photos.");
+                                } finally {
+                                  setPortfolioUploading(false);
+                                }
+                              }}
+                            />
+                            {portfolioUploading && (
+                              <p className="text-xs text-amber-600 mt-1">Saving portfolio photos...</p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>

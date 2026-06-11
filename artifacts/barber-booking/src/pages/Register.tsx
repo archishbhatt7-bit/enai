@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useRegisterBarber, useCreateService } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
-import { Scissors, ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import { Scissors, ArrowLeft, Check, Plus, Trash2, Camera } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 const PRESET_SERVICES = [
   { name: "Haircut", price: 150, durationMinutes: 30 },
@@ -20,7 +21,15 @@ interface ServiceConfig {
   durationMinutes: number;
 }
 
-type Step = "details" | "services" | "done";
+type Step = "details" | "photos" | "services" | "done";
+
+const STEPS: Step[] = ["details", "photos", "services", "done"];
+const STEP_LABELS: Record<Step, string> = {
+  details: "Shop Details",
+  photos: "Photos",
+  services: "Services",
+  done: "Done",
+};
 
 export default function Register() {
   const [, navigate] = useLocation();
@@ -49,13 +58,19 @@ export default function Register() {
   );
   const [customServices, setCustomServices] = useState<ServiceConfig[]>([]);
 
+  // Photo state
+  const [profilePhotoPaths, setProfilePhotoPaths] = useState<string[]>([]);
+  const [interiorPhotoPaths, setInteriorPhotoPaths] = useState<string[]>([]);
+  const [photosError, setPhotosError] = useState("");
+  const [savingPhotos, setSavingPhotos] = useState(false);
+
   const registerMutation = useRegisterBarber({
     mutation: {
       onSuccess: (data) => {
         login(data.token, data.shop);
         setShopSlug(data.shop.slug);
         setShopName(data.shop.shopName);
-        setStep("services");
+        setStep("photos");
       },
       onError: (err: any) => {
         setError(err?.data?.error || "Registration failed. Please try again.");
@@ -73,6 +88,36 @@ export default function Register() {
       return;
     }
     registerMutation.mutate({ data: form });
+  };
+
+  const handlePhotosSubmit = async () => {
+    setPhotosError("");
+    if (profilePhotoPaths.length === 0) {
+      setPhotosError("Please upload at least one profile photo.");
+      return;
+    }
+    if (interiorPhotoPaths.length === 0) {
+      setPhotosError("Please upload at least one interior photo.");
+      return;
+    }
+
+    setSavingPhotos(true);
+    try {
+      const res = await fetch(`/api/shops/${shopSlug}/photos`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profilePhoto: profilePhotoPaths[0],
+          interiorPhotos: interiorPhotoPaths,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save photos");
+      setStep("services");
+    } catch {
+      setPhotosError("Failed to save photos. Please try again.");
+    } finally {
+      setSavingPhotos(false);
+    }
   };
 
   const handleServicesSubmit = async () => {
@@ -112,6 +157,8 @@ export default function Register() {
     );
   };
 
+  const currentStepIdx = STEPS.indexOf(step);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200">
@@ -130,22 +177,24 @@ export default function Register() {
 
       <div className="max-w-2xl mx-auto px-4 py-10">
         {/* Progress */}
-        <div className="flex items-center gap-4 mb-8">
-          {(["details", "services", "done"] as Step[]).map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
+        <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-1">
+          {STEPS.map((s, i) => (
+            <div key={s} className="flex items-center gap-2 flex-shrink-0">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
                 step === s
                   ? "bg-amber-500 border-amber-500 text-slate-900"
-                  : (["details", "services", "done"].indexOf(step) > i)
+                  : currentStepIdx > i
                   ? "bg-green-500 border-green-500 text-white"
                   : "border-slate-300 text-slate-400"
               }`}>
-                {(["details", "services", "done"].indexOf(step) > i) ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                {currentStepIdx > i ? <Check className="w-3.5 h-3.5" /> : i + 1}
               </div>
-              <span className={`text-xs font-medium capitalize ${step === s ? "text-slate-900" : "text-slate-400"}`}>
-                {s === "details" ? "Shop Details" : s === "services" ? "Services" : "Done"}
+              <span className={`text-xs font-medium ${step === s ? "text-slate-900" : "text-slate-400"}`}>
+                {STEP_LABELS[s]}
               </span>
-              {i < 2 && <div className={`h-px w-8 ${(["details", "services", "done"].indexOf(step) > i) ? "bg-green-500" : "bg-slate-200"}`} />}
+              {i < STEPS.length - 1 && (
+                <div className={`h-px w-6 ${currentStepIdx > i ? "bg-green-500" : "bg-slate-200"}`} />
+              )}
             </div>
           ))}
         </div>
@@ -278,7 +327,72 @@ export default function Register() {
           </div>
         )}
 
-        {/* Step 2: Services */}
+        {/* Step 2: Photos */}
+        {step === "photos" && (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
+                <Camera className="w-4 h-4 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Shop Photos</h2>
+                <p className="text-slate-400 text-xs">Help customers see your shop before visiting</p>
+              </div>
+            </div>
+
+            {photosError && (
+              <div className="my-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {photosError}
+              </div>
+            )}
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <ImageUpload
+                  label="Profile / Cover Photo *"
+                  multiple={false}
+                  maxFiles={1}
+                  existingPaths={profilePhotoPaths}
+                  onUploaded={(paths) => setProfilePhotoPaths((prev) => [...prev, ...paths].slice(0, 1))}
+                  onRemove={() => setProfilePhotoPaths([])}
+                />
+                <p className="text-xs text-slate-400 mt-1">This will be shown as your shop's main photo. Required.</p>
+              </div>
+
+              <div>
+                <ImageUpload
+                  label="Interior / Salon Photos *"
+                  multiple
+                  maxFiles={6}
+                  existingPaths={interiorPhotoPaths}
+                  onUploaded={(paths) => setInteriorPhotoPaths((prev) => [...prev, ...paths].slice(0, 6))}
+                  onRemove={(i) => setInteriorPhotoPaths((prev) => prev.filter((_, idx) => idx !== i))}
+                />
+                <p className="text-xs text-slate-400 mt-1">Show customers what your salon looks like inside. Required (up to 6).</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                type="button"
+                onClick={handlePhotosSubmit}
+                disabled={savingPhotos}
+                className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
+              >
+                {savingPhotos ? "Saving..." : "Save Photos & Continue"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("services")}
+                className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:border-slate-400 transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Services */}
         {step === "services" && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-2">Configure Services</h2>
@@ -341,7 +455,6 @@ export default function Register() {
               ))}
             </div>
 
-            {/* Custom Services */}
             {customServices.map((service, i) => (
               <div key={i} className="border border-amber-300 bg-amber-50 rounded-lg p-4 mb-3">
                 <div className="flex items-center gap-3">
@@ -408,7 +521,7 @@ export default function Register() {
           </div>
         )}
 
-        {/* Step 3: Done */}
+        {/* Step 4: Done */}
         {step === "done" && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
