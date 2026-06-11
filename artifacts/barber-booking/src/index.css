@@ -224,3 +224,57 @@
     inset: -1px;
   }
 }
+
+@keyframes successOverlayIn {
+  0%   { opacity: 0; background-color: #16a34a; }
+  15%  { opacity: 1; background-color: #16a34a; }
+  70%  { opacity: 1; background-color: #16a34a; }
+  100% { opacity: 0; background-color: #16a34a; }
+}
+
+@keyframes tickCircleIn {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  50%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
+  70%  { transform: scale(0.95) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes tickDraw {
+  from { stroke-dashoffset: 50; opacity: 0; }
+  to   { stroke-dashoffset: 0;  opacity: 1; }
+}
+
+.success-overlay-bg {
+  animation: successOverlayIn 2s ease forwards;
+  background-color: #16a34a;
+}
+
+.success-tick-circle {
+  animation: tickCircleIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+  width: 120px;
+  height: 120px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.success-tick-svg {
+  width: 80px;
+  height: 80px;
+}
+
+.success-tick-ring {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: tickDraw 0.4s ease 0.25s forwards;
+  opacity: 0;
+}
+
+.success-tick-check {
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: tickDraw 0.35s ease 0.5s forwards;
+  opacity: 0;
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   useGetShop,
@@ -50,6 +50,36 @@ export default function ShopPage() {
   const [otpError, setOtpError] = useState("");
   const [bookingOtp, setBookingOtp] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  function playSuccessSound() {
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + i * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35);
+      osc.start(ctx.currentTime + i * 0.12);
+      osc.stop(ctx.currentTime + i * 0.12 + 0.4);
+    });
+  }
+
+  useEffect(() => {
+    if (step === "confirm") {
+      setShowSuccessOverlay(true);
+      playSuccessSound();
+      const timer = setTimeout(() => setShowSuccessOverlay(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   const { data: profileData, isLoading: shopLoading } = useGetShop(slug);
   const shop = profileData?.shop;
@@ -157,6 +187,16 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {showSuccessOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center success-overlay-bg">
+          <div className="success-tick-circle">
+            <svg className="success-tick-svg" viewBox="0 0 52 52" fill="none">
+              <circle className="success-tick-ring" cx="26" cy="26" r="24" stroke="white" strokeWidth="3" fill="none" />
+              <path className="success-tick-check" d="M14 26 L22 34 L38 18" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </svg>
+          </div>
+        </div>
+      )}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate("/customer")} className="text-slate-500 hover:text-slate-900">
