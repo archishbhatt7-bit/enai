@@ -53,10 +53,10 @@ export default function CustomerLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="min-h-screen bg-blue-950 flex flex-col">
       {/* Header strip */}
       <div className="px-5 pt-12 pb-10 flex flex-col items-center">
-        <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center shadow-xl mb-5">
+        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl mb-5">
           <Scissors className="w-8 h-8 text-slate-900" />
         </div>
         <h1 className="text-3xl font-black text-white tracking-tight">SlotCut</h1>
@@ -100,7 +100,7 @@ export default function CustomerLogin() {
                     placeholder="98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="w-full pl-16 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-semibold text-lg focus:outline-none focus:border-amber-500 tracking-widest"
+                    className="w-full pl-16 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-semibold text-lg focus:outline-none focus:border-blue-600 tracking-widest"
                   />
                 </div>
               </div>
@@ -108,7 +108,7 @@ export default function CustomerLogin() {
               <button
                 type="submit"
                 disabled={phone.length < 10 || sendOtpMutation.isPending}
-                className="w-full bg-amber-500 text-slate-900 py-4 rounded-2xl font-black text-base hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               >
                 {sendOtpMutation.isPending ? "Sending…" : "Send OTP →"}
               </button>
@@ -122,9 +122,9 @@ export default function CustomerLogin() {
             <p className="text-slate-400 text-sm mb-2">Sent to <strong>+91 {phone}</strong></p>
 
             {demoOtp && (
-              <div className="mb-5 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl">
-                <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">Demo — Your OTP</p>
-                <p className="text-4xl font-black text-amber-700 tracking-[0.3em]">{demoOtp}</p>
+              <div className="mb-5 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl">
+                <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Demo — Your OTP</p>
+                <p className="text-4xl font-black text-blue-800 tracking-[0.3em]">{demoOtp}</p>
               </div>
             )}
 
@@ -146,7 +146,7 @@ export default function CustomerLogin() {
                   placeholder="· · · ·"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  className="w-full px-6 py-5 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-black text-4xl text-center focus:outline-none focus:border-amber-500 tracking-[0.5em]"
+                  className="w-full px-6 py-5 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-black text-4xl text-center focus:outline-none focus:border-blue-600 tracking-[0.5em]"
                   autoFocus
                 />
               </div>
@@ -154,7 +154,7 @@ export default function CustomerLogin() {
               <button
                 type="submit"
                 disabled={otp.length !== 4 || verifyOtpMutation.isPending}
-                className="w-full bg-amber-500 text-slate-900 py-4 rounded-2xl font-black text-base hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {verifyOtpMutation.isPending ? "Verifying…" : "Verify & Continue →"}
               </button>

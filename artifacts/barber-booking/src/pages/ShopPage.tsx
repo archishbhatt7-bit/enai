@@ -165,7 +165,7 @@ export default function ShopPage() {
   if (shopLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -175,7 +175,7 @@ export default function ShopPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-xl font-bold text-slate-900">Shop not found</h1>
-          <button onClick={() => navigate("/customer")} className="mt-4 text-amber-600 font-medium text-sm">
+          <button onClick={() => navigate("/customer")} className="mt-4 text-blue-700 font-medium text-sm">
             Back to home
           </button>
         </div>
@@ -203,7 +203,7 @@ export default function ShopPage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center flex-shrink-0">
+            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center flex-shrink-0">
               <Scissors className="w-3.5 h-3.5 text-slate-900" />
             </div>
             <div className="min-w-0">
@@ -247,7 +247,7 @@ export default function ShopPage() {
                 <div key={s} className="flex items-center gap-1.5 flex-shrink-0">
                   <div className={`flex items-center gap-1.5 ${active ? "opacity-100" : done ? "opacity-80" : "opacity-40"}`}>
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                      done ? "bg-green-500 text-white" : active ? "bg-amber-500 text-slate-900" : "bg-slate-200 text-slate-500"
+                      done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
                     }`}>
                       {done ? <Check className="w-3 h-3" /> : i + 1}
                     </div>
@@ -288,19 +288,19 @@ export default function ShopPage() {
                       setSelectedService(service.id);
                       setStep("slot");
                     }}
-                    className="w-full text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-amber-400 hover:bg-amber-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-blue-400 hover:bg-blue-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-semibold text-slate-900">{service.name}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-sm text-amber-600 font-bold">₹{service.price}</span>
+                          <span className="text-sm text-blue-700 font-bold">₹{service.price}</span>
                           <span className="text-xs text-slate-400 flex items-center gap-1">
                             <Clock className="w-3 h-3" /> ~{service.durationMinutes} min
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </button>
                 ))}
@@ -375,8 +375,8 @@ export default function ShopPage() {
                     onClick={() => { setSelectedDate(str); setSelectedTime(null); setTimePeriod("morning"); }}
                     className={`flex-shrink-0 text-center px-3 py-2.5 rounded-lg border transition-all ${
                       active
-                        ? "bg-amber-500 border-amber-500 text-slate-900"
-                        : "bg-white border-slate-200 text-slate-700 hover:border-amber-300"
+                        ? "bg-blue-600 border-blue-600 text-slate-900"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-blue-300"
                     }`}
                   >
                     <p className="text-xs font-semibold">{DAYS[d.getDay()]}</p>
@@ -434,16 +434,16 @@ export default function ShopPage() {
                           onClick={() => { setTimePeriod(key); setSelectedTime(null); }}
                           className={`flex flex-col items-center py-3 px-2 rounded-xl border-2 transition-all ${
                             active
-                              ? "border-amber-500 bg-amber-50"
-                              : "border-slate-200 bg-white hover:border-amber-300"
+                              ? "border-blue-600 bg-blue-50"
+                              : "border-slate-200 bg-white hover:border-blue-300"
                           }`}
                         >
                           <span className="text-xl mb-1 leading-none">{emoji}</span>
-                          <span className={`text-xs font-bold ${active ? "text-amber-700" : "text-slate-700"}`}>{label}</span>
+                          <span className={`text-xs font-bold ${active ? "text-blue-800" : "text-slate-700"}`}>{label}</span>
                           <span className="text-xs text-slate-400 mt-0.5">{range}</span>
                           <span className={`mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
                             count > 0
-                              ? active ? "bg-amber-500 text-slate-900" : "bg-slate-100 text-slate-600"
+                              ? active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
                               : "bg-slate-50 text-slate-300"
                           }`}>
                             {count} slot{count !== 1 ? "s" : ""}
@@ -470,8 +470,8 @@ export default function ShopPage() {
                             !slot.available
                               ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
                               : selectedTime === slot.time
-                              ? "bg-amber-500 border-amber-500 text-slate-900"
-                              : "bg-white border-slate-200 text-slate-700 hover:border-amber-400 hover:bg-amber-50"
+                              ? "bg-blue-600 border-blue-600 text-slate-900"
+                              : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50"
                           }`}
                         >
                           {slot.time}
@@ -515,18 +515,18 @@ export default function ShopPage() {
               <button
                 onClick={() => setPaymentType("token")}
                 className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  paymentType === "token" ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-white"
+                  paymentType === "token" ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white"
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-bold text-slate-900">Token Booking</p>
-                    <p className="text-2xl font-black text-amber-600 mt-1">₹1</p>
+                    <p className="text-2xl font-black text-blue-700 mt-1">₹1</p>
                     <p className="text-xs text-slate-500 mt-1">Pay ₹{selectedServiceObj.price} directly to barber after service</p>
-                    <p className="text-xs text-amber-600 font-medium mt-0.5">₹1 platform fee charged now</p>
+                    <p className="text-xs text-blue-700 font-medium mt-0.5">₹1 platform fee charged now</p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${
-                    paymentType === "token" ? "border-amber-500 bg-amber-500" : "border-slate-300"
+                    paymentType === "token" ? "border-blue-600 bg-blue-600" : "border-slate-300"
                   }`}>
                     {paymentType === "token" && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
@@ -536,7 +536,7 @@ export default function ShopPage() {
               <button
                 onClick={() => setPaymentType("full")}
                 className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  paymentType === "full" ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-white"
+                  paymentType === "full" ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white"
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -547,7 +547,7 @@ export default function ShopPage() {
                     <p className="text-xs text-green-600 font-medium mt-0.5">₹0 platform fee</p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${
-                    paymentType === "full" ? "border-amber-500 bg-amber-500" : "border-slate-300"
+                    paymentType === "full" ? "border-blue-600 bg-blue-600" : "border-slate-300"
                   }`}>
                     {paymentType === "full" && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
@@ -565,7 +565,7 @@ export default function ShopPage() {
 
             <button
               onClick={() => setStep("contact")}
-              className="w-full bg-amber-500 text-slate-900 py-3.5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors"
+              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors"
             >
               Continue — Pay ₹{paymentType === "token" ? 1 : selectedServiceObj.price}
             </button>
@@ -598,7 +598,7 @@ export default function ShopPage() {
                     placeholder="Full name"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
               </div>
@@ -613,7 +613,7 @@ export default function ShopPage() {
                     placeholder="10-digit mobile number"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <p className="text-xs text-slate-400 mt-1">Your arrival OTP will be sent to this number</p>
@@ -623,7 +623,7 @@ export default function ShopPage() {
             <button
               onClick={handleSendOtp}
               disabled={sendOtpMutation.isPending}
-              className="w-full bg-amber-500 text-slate-900 py-3.5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
+              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
             >
               {sendOtpMutation.isPending ? "Sending OTP..." : "Send OTP & Confirm Booking"}
             </button>
@@ -639,8 +639,8 @@ export default function ShopPage() {
             </p>
 
             {bookingOtp && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-                <p className="text-amber-700 font-semibold">Demo Mode — Your OTP: <span className="text-2xl font-black">{bookingOtp}</span></p>
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                <p className="text-blue-800 font-semibold">Demo Mode — Your OTP: <span className="text-2xl font-black">{bookingOtp}</span></p>
               </div>
             )}
 
@@ -659,14 +659,14 @@ export default function ShopPage() {
                 placeholder="0000"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                className="w-full px-4 py-4 text-3xl font-black text-center border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 tracking-widest"
+                className="w-full px-4 py-4 text-3xl font-black text-center border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 tracking-widest"
               />
             </div>
 
             <button
               onClick={handleVerifyOtp}
               disabled={otp.length !== 4 || verifyOtpMutation.isPending || createBookingMutation.isPending}
-              className="w-full bg-amber-500 text-slate-900 py-3.5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
+              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
             >
               {verifyOtpMutation.isPending || createBookingMutation.isPending ? "Verifying..." : "Verify & Book"}
             </button>
@@ -691,8 +691,8 @@ export default function ShopPage() {
               Your slot at <strong>{selectedTime}</strong> on <strong>{formatDisplayDate(new Date(selectedDate + "T12:00:00"))}</strong> is booked.
             </p>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 text-left">
-              <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-3">Booking Summary</p>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 text-left">
+              <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-3">Booking Summary</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Service</span>
@@ -720,7 +720,7 @@ export default function ShopPage() {
 
             <button
               onClick={() => navigate("/")}
-              className="w-full bg-amber-500 text-slate-900 py-3.5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors"
+              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors"
             >
               Done
             </button>

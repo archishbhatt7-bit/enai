@@ -53,7 +53,7 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-slate-100 text-slate-500 border-slate-200",
   no_show: "bg-red-100 text-red-600 border-red-200",
   cancelled: "bg-slate-100 text-slate-400 border-slate-200",
-  pending: "bg-amber-100 text-amber-700 border-amber-200",
+  pending: "bg-blue-100 text-blue-800 border-blue-200",
 };
 
 const TIMELINE_COLORS: Record<string, string> = {
@@ -61,7 +61,7 @@ const TIMELINE_COLORS: Record<string, string> = {
   active: "bg-green-500",
   completed: "bg-slate-300",
   no_show: "bg-red-300",
-  pending: "bg-amber-400",
+  pending: "bg-blue-500",
 };
 
 const CLOCK_COLORS: Record<string, string> = {
@@ -341,7 +341,7 @@ export default function Dashboard() {
   if (!isAuthenticated || !shop) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -370,7 +370,7 @@ export default function Dashboard() {
         <aside className="w-52 bg-slate-900 text-white flex-shrink-0 flex flex-col hidden lg:flex">
           <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center">
+              <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
                 <Scissors className="w-3.5 h-3.5 text-slate-900" />
               </div>
               <span className="font-bold text-sm">SlotCut</span>
@@ -394,7 +394,7 @@ export default function Dashboard() {
             {shop.isPaused ? (
               <button
                 onClick={handleUnpause}
-                className="w-full mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
+                className="w-full mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-blue-600/20 text-blue-500 hover:bg-blue-600/30 transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Resume Bookings
               </button>
@@ -477,7 +477,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
                   { label: "Today's Bookings", value: dashboard.todayBookings, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-                  { label: "Active Slots", value: dashboard.activeSlots, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                  { label: "Active Slots", value: dashboard.activeSlots, icon: Clock, color: "text-blue-700", bg: "bg-blue-50" },
                   { label: "Available Chairs", value: dashboard.availableChairs, icon: TrendingUp, color: "text-slate-600", bg: "bg-slate-100" },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
                   <div key={label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
@@ -521,8 +521,8 @@ export default function Dashboard() {
                           onClick={() => setSelectedDate(str)}
                           className={`flex-shrink-0 text-center px-3 py-2 rounded-lg border text-xs transition-all ${
                             active
-                              ? "bg-amber-500 border-amber-500 text-slate-900 font-bold"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-amber-300"
+                              ? "bg-blue-600 border-blue-600 text-slate-900 font-bold"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
                           }`}
                         >
                           <div className="font-semibold">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]}</div>
@@ -622,7 +622,7 @@ export default function Dashboard() {
                                         placeholder="OTP"
                                         value={otpInputs[booking.id] ?? ""}
                                         onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                                        className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm text-center font-mono focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                        className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm text-center font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
                                       />
                                       <button
                                         onClick={() => handleOtpVerify(booking.id)}
@@ -655,7 +655,7 @@ export default function Dashboard() {
                                   <button
                                     onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
                                     disabled={undoNoShowMutation.isPending}
-                                    className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                    className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
                                   >
                                     <RefreshCw className="w-3.5 h-3.5" /> Undo No-show
                                   </button>
@@ -681,7 +681,7 @@ export default function Dashboard() {
                     {/* Profile Photo */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
                       <h3 className="font-semibold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-amber-500" /> Profile / Cover Photo
+                        <Camera className="w-4 h-4 text-blue-600" /> Profile / Cover Photo
                       </h3>
                       <ImageUpload
                         label="Main shop photo"
@@ -728,7 +728,7 @@ export default function Dashboard() {
                     {/* Interior Photos */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
                       <h3 className="font-semibold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-amber-500" /> Interior / Salon Photos
+                        <Camera className="w-4 h-4 text-blue-600" /> Interior / Salon Photos
                       </h3>
                       {(() => {
                         const current: string[] = interiorPaths !== null
@@ -778,7 +778,7 @@ export default function Dashboard() {
                     {/* Portfolio Photos */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
                       <h3 className="font-semibold text-slate-900 text-sm mb-1 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-amber-500" /> Portfolio / Work Showcase
+                        <Camera className="w-4 h-4 text-blue-600" /> Portfolio / Work Showcase
                       </h3>
                       <p className="text-xs text-slate-400 mb-4">Hairstyles and your best work. Customers see this before booking.</p>
                       {(() => {
@@ -833,7 +833,7 @@ export default function Dashboard() {
                               }}
                             />
                             {portfolioUploading && (
-                              <p className="text-xs text-amber-600 mt-1">Saving portfolio photos...</p>
+                              <p className="text-xs text-blue-700 mt-1">Saving portfolio photos...</p>
                             )}
                           </>
                         );
@@ -912,7 +912,7 @@ export default function Dashboard() {
                         { label: "Completed", value: dashboard.completedToday, color: "text-green-600" },
                         { label: "No-shows", value: dashboard.noShowsToday, color: "text-red-500" },
                         { label: "Weekly Bookings", value: dashboard.weeklyBookings, color: "text-blue-600" },
-                        { label: "Weekly Revenue", value: `₹${dashboard.weeklyRevenue}`, color: "text-amber-600" },
+                        { label: "Weekly Revenue", value: `₹${dashboard.weeklyRevenue}`, color: "text-blue-700" },
                       ].map(({ label, value, color }) => (
                         <div key={label} className="flex items-center justify-between py-1">
                           <span className="text-xs text-slate-500">{label}</span>

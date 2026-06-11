@@ -98,6 +98,10 @@ export interface ShopSummary {
   latitude?: string | null;
   /** @nullable */
   longitude?: string | null;
+  /** @nullable */
+  profilePhoto?: string | null;
+  /** @nullable */
+  openDays?: number[] | null;
 }
 
 export interface Service {

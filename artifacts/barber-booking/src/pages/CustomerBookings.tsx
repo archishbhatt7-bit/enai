@@ -93,7 +93,7 @@ export default function CustomerBookings() {
             <p className="text-slate-400 text-sm mt-1">Book a slot at a barbershop to get started</p>
             <button
               onClick={() => navigate("/customer")}
-              className="mt-4 text-amber-600 font-semibold text-sm hover:text-amber-700"
+              className="mt-4 text-blue-700 font-semibold text-sm hover:text-blue-800"
             >
               Find a shop →
             </button>
@@ -110,7 +110,7 @@ export default function CustomerBookings() {
                 <div key={b.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
                         <Scissors className="w-4 h-4 text-white" />
                       </div>
                       <div className="min-w-0">
@@ -144,8 +144,8 @@ export default function CustomerBookings() {
                     </div>
                   </div>
                   {b.arrivalOtp && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center justify-between mb-3">
-                      <span className="text-xs text-amber-700 font-medium">Arrival OTP</span>
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 flex items-center justify-between mb-3">
+                      <span className="text-xs text-blue-800 font-medium">Arrival OTP</span>
                       <span className="text-xl font-black text-slate-900 tracking-widest">{b.arrivalOtp}</span>
                     </div>
                   )}

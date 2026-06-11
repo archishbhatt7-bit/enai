@@ -41,7 +41,7 @@ export default function Login() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center">
+            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
               <Scissors className="w-3.5 h-3.5 text-slate-900" />
             </div>
             <span className="font-bold text-slate-900">SlotCut</span>
@@ -75,7 +75,7 @@ export default function Login() {
                   placeholder="10-digit mobile number"
                   value={form.phone}
                   onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                 />
               </div>
 
@@ -89,7 +89,7 @@ export default function Login() {
                     placeholder="Your password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className="w-full px-3 py-2.5 pr-10 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 pr-10 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                   <button
                     type="button"
@@ -104,7 +104,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="w-full bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60 mt-2"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60 mt-2"
               >
                 {mutation.isPending ? "Signing in..." : "Sign In"}
               </button>
@@ -113,7 +113,7 @@ export default function Login() {
             <div className="mt-6 text-center">
               <p className="text-sm text-slate-500">
                 New barber?{" "}
-                <button onClick={() => navigate("/register")} className="text-amber-600 font-semibold hover:text-amber-700">
+                <button onClick={() => navigate("/register")} className="text-blue-700 font-semibold hover:text-blue-800">
                   Register your shop
                 </button>
               </p>

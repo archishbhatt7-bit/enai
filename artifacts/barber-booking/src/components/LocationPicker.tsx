@@ -118,7 +118,7 @@ export default function LocationPicker({ onSelect, onClose, initialLat, initialL
           <button
             type="button"
             onClick={useMyLocation}
-            className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <Navigation className="w-3.5 h-3.5" /> Use My Location
           </button>
@@ -149,7 +149,7 @@ export default function LocationPicker({ onSelect, onClose, initialLat, initialL
             type="button"
             disabled={!selLat || !selLng}
             onClick={() => { if (selLat && selLng) { onSelect(selLat, selLng); onClose(); } }}
-            className="flex-1 py-2.5 bg-amber-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
             <Check className="w-4 h-4" /> Confirm
           </button>

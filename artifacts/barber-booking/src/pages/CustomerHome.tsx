@@ -37,12 +37,12 @@ function ShopCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:border-amber-300 hover:shadow-md transition-all group"
+      className="w-full text-left bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex gap-3 flex-1 min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <Scissors className="w-5 h-5 text-amber-600" />
+          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <Scissors className="w-5 h-5 text-blue-700" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -63,7 +63,7 @@ function ShopCard({
                 <Users className="w-3 h-3" /> {shop.numChairs} chairs
               </span>
               {shop.minPrice != null && (
-                <span className="text-xs font-bold text-amber-600">from ₹{shop.minPrice}</span>
+                <span className="text-xs font-bold text-blue-700">from ₹{shop.minPrice}</span>
               )}
               {distKm !== null && (
                 <span className="flex items-center gap-1 text-xs font-semibold text-blue-600">
@@ -78,14 +78,14 @@ function ShopCard({
             onClick={onToggleFav}
             className={`p-1.5 rounded-lg transition-colors ${
               isFav
-                ? "text-amber-500 bg-amber-50"
-                : "text-slate-300 hover:text-amber-400 hover:bg-amber-50"
+                ? "text-blue-600 bg-blue-50"
+                : "text-slate-300 hover:text-blue-500 hover:bg-blue-50"
             }`}
             title={isFav ? "Remove from favourites" : "Add to favourites"}
           >
-            <Star className={`w-4 h-4 ${isFav ? "fill-amber-500" : ""}`} />
+            <Star className={`w-4 h-4 ${isFav ? "fill-yellow-400" : ""}`} />
           </button>
-          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-colors" />
         </div>
       </div>
     </button>
@@ -189,7 +189,7 @@ export default function CustomerHome() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/customer/bookings")}
-              className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg"
+              className="flex items-center gap-1.5 text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg"
               title="My Bookings"
             >
               <BookOpen className="w-3.5 h-3.5" /> My Bookings
@@ -220,7 +220,7 @@ export default function CustomerHome() {
               placeholder="e.g. Mumbai, Raja Barbershop…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:bg-white/15 focus:border-amber-500/50"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:bg-white/15 focus:border-blue-600/50"
             />
           </div>
           {isSearching ? (
@@ -234,7 +234,7 @@ export default function CustomerHome() {
           ) : (
             <button
               type="submit"
-              className="bg-amber-500 text-slate-900 px-5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors flex-shrink-0"
+              className="bg-blue-600 text-white px-5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors flex-shrink-0"
             >
               Search
             </button>
@@ -251,19 +251,19 @@ export default function CustomerHome() {
             <button
               key={b.id}
               onClick={() => navigate(`/shop/${b.shopSlug}`)}
-              className="w-full text-left bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 hover:bg-amber-100 transition-colors"
+              className="w-full text-left bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3 hover:bg-blue-100 transition-colors"
             >
-              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
                 <Scissors className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-slate-900 text-sm truncate">{b.shopName}</p>
                 <p className="text-xs text-slate-500 truncate">{b.serviceName} · {b.shopCity}</p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-blue-800">
                     <Calendar className="w-3 h-3" /> {formatDisplayDate(b.slotDate)}
                   </span>
-                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-blue-800">
                     <Clock className="w-3 h-3" /> {b.slotTime} – {b.slotEndTime}
                   </span>
                 </div>
@@ -302,8 +302,8 @@ export default function CustomerHome() {
           <div className="space-y-3">
             {!isSearching && favourites.length > 0 && (
               <div className="flex items-center gap-2 px-1 mb-1">
-                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                <p className="text-xs text-amber-600 font-bold uppercase tracking-wider">Favourites</p>
+                <Star className="w-3.5 h-3.5 text-blue-600 fill-yellow-400" />
+                <p className="text-xs text-blue-700 font-bold uppercase tracking-wider">Favourites</p>
               </div>
             )}
 

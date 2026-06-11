@@ -24,6 +24,7 @@ export const shopsTable = pgTable("shops", {
   pincode: text("pincode"),
   latitude: text("latitude"),
   longitude: text("longitude"),
+  openDays: json("open_days").$type<number[]>().default([0, 1, 2, 3, 4, 5, 6]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

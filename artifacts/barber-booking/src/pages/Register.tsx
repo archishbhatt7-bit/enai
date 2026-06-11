@@ -195,7 +195,7 @@ export default function Register() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-amber-500 rounded-md flex items-center justify-center">
+            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
               <Scissors className="w-3.5 h-3.5 text-slate-900" />
             </div>
             <span className="font-bold text-slate-900">SlotCut — Register Shop</span>
@@ -210,7 +210,7 @@ export default function Register() {
             <div key={s} className="flex items-center gap-2 flex-shrink-0">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
                 step === s
-                  ? "bg-amber-500 border-amber-500 text-slate-900"
+                  ? "bg-blue-600 border-blue-600 text-slate-900"
                   : currentStepIdx > i
                   ? "bg-green-500 border-green-500 text-white"
                   : "border-slate-300 text-slate-400"
@@ -247,7 +247,7 @@ export default function Register() {
                     placeholder="Your full name"
                     value={form.ownerName}
                     onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -257,7 +257,7 @@ export default function Register() {
                     placeholder="e.g. Raja Barbershop"
                     value={form.shopName}
                     onChange={(e) => setForm((f) => ({ ...f, shopName: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -269,7 +269,7 @@ export default function Register() {
                     placeholder="10-digit mobile"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -279,7 +279,7 @@ export default function Register() {
                     placeholder="Choose a password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -289,7 +289,7 @@ export default function Register() {
                     placeholder="e.g. Mumbai"
                     value={form.city}
                     onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -299,7 +299,7 @@ export default function Register() {
                     placeholder="Street address"
                     value={form.address}
                     onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -311,7 +311,7 @@ export default function Register() {
                     placeholder="e.g. 400001"
                     value={form.pincode}
                     onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -322,7 +322,7 @@ export default function Register() {
                     max={20}
                     value={form.numChairs}
                     onChange={(e) => setForm((f) => ({ ...f, numChairs: Number(e.target.value) }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -333,7 +333,7 @@ export default function Register() {
                     max={20}
                     value={form.numBarbers}
                     onChange={(e) => setForm((f) => ({ ...f, numBarbers: Number(e.target.value) }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -342,7 +342,7 @@ export default function Register() {
                     type="time"
                     value={form.openTime}
                     onChange={(e) => setForm((f) => ({ ...f, openTime: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
                 <div>
@@ -351,7 +351,7 @@ export default function Register() {
                     type="time"
                     value={form.closeTime}
                     onChange={(e) => setForm((f) => ({ ...f, closeTime: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
               </div>
@@ -366,7 +366,7 @@ export default function Register() {
                     type="button"
                     onClick={handleUseMyLocation}
                     disabled={locStatus === "loading"}
-                    className="flex items-center gap-1.5 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-60"
+                    className="flex items-center gap-1.5 text-sm font-semibold text-blue-800 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60"
                   >
                     <Navigation className="w-3.5 h-3.5" />
                     {locStatus === "loading" ? "Getting location…" : "Use Live Location"}
@@ -393,7 +393,7 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={registerMutation.isPending}
-                className="w-full bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60 mt-4"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60 mt-4"
               >
                 {registerMutation.isPending ? "Creating your shop..." : "Create Shop & Continue"}
               </button>
@@ -417,8 +417,8 @@ export default function Register() {
         {step === "photos" && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
-                <Camera className="w-4 h-4 text-amber-600" />
+              <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
+                <Camera className="w-4 h-4 text-blue-700" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Shop Photos</h2>
@@ -463,7 +463,7 @@ export default function Register() {
                 type="button"
                 onClick={handlePhotosSubmit}
                 disabled={savingPhotos}
-                className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
               >
                 {savingPhotos ? "Saving..." : "Save Photos & Continue"}
               </button>
@@ -488,7 +488,7 @@ export default function Register() {
               {PRESET_SERVICES.map((service) => (
                 <div key={service.name} className={`border rounded-lg p-4 transition-all cursor-pointer ${
                   selectedServices[service.name]
-                    ? "border-amber-400 bg-amber-50"
+                    ? "border-blue-400 bg-blue-50"
                     : "border-slate-200 hover:border-slate-300"
                 }`}>
                   <div className="flex items-center gap-3">
@@ -497,7 +497,7 @@ export default function Register() {
                       onClick={() => toggleService(service.name)}
                       className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                         selectedServices[service.name]
-                          ? "bg-amber-500 border-amber-500"
+                          ? "bg-blue-600 border-blue-600"
                           : "border-slate-300"
                       }`}
                     >
@@ -518,7 +518,7 @@ export default function Register() {
                             min={1}
                             value={serviceConfigs[service.name].price}
                             onChange={(e) => updateServiceConfig(service.name, "price", Number(e.target.value))}
-                            className="w-20 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            className="w-20 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -530,7 +530,7 @@ export default function Register() {
                             step={5}
                             value={serviceConfigs[service.name].durationMinutes}
                             onChange={(e) => updateServiceConfig(service.name, "durationMinutes", Number(e.target.value))}
-                            className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -542,14 +542,14 @@ export default function Register() {
             </div>
 
             {customServices.map((service, i) => (
-              <div key={i} className="border border-amber-300 bg-amber-50 rounded-lg p-4 mb-3">
+              <div key={i} className="border border-blue-300 bg-blue-50 rounded-lg p-4 mb-3">
                 <div className="flex items-center gap-3">
                   <input
                     type="text"
                     placeholder="Service name"
                     value={service.name}
                     onChange={(e) => updateCustomService(i, "name", e.target.value)}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                   />
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-slate-500">₹</span>
@@ -558,7 +558,7 @@ export default function Register() {
                       min={1}
                       value={service.price}
                       onChange={(e) => updateCustomService(i, "price", Number(e.target.value))}
-                      className="w-20 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-20 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -569,7 +569,7 @@ export default function Register() {
                       step={5}
                       value={service.durationMinutes}
                       onChange={(e) => updateCustomService(i, "durationMinutes", Number(e.target.value))}
-                      className="w-16 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-16 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
                   <button onClick={() => removeCustomService(i)} className="text-red-500 hover:text-red-700 p-1">
@@ -582,7 +582,7 @@ export default function Register() {
             <button
               type="button"
               onClick={addCustomService}
-              className="flex items-center gap-2 text-sm text-amber-600 font-medium hover:text-amber-700 mb-6"
+              className="flex items-center gap-2 text-sm text-blue-700 font-medium hover:text-blue-800 mb-6"
             >
               <Plus className="w-4 h-4" /> Add custom service
             </button>
@@ -592,7 +592,7 @@ export default function Register() {
                 type="button"
                 onClick={handleServicesSubmit}
                 disabled={createServiceMutation.isPending}
-                className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors disabled:opacity-60"
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
               >
                 {createServiceMutation.isPending ? "Saving..." : "Save Services & Finish"}
               </button>
@@ -617,16 +617,16 @@ export default function Register() {
             <p className="text-slate-500 mb-6">
               Your shop <strong>{shopName}</strong> is live. Share your booking link with customers.
             </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Your Booking Link</p>
-              <code className="text-sm text-amber-700 font-mono break-all">
+              <code className="text-sm text-blue-800 font-mono break-all">
                 {window.location.origin}/shop/{shopSlug}
               </code>
             </div>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => navigate(`/dashboard/${shopSlug}`)}
-                className="w-full bg-amber-500 text-slate-900 py-3 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors"
               >
                 Go to Dashboard
               </button>
