@@ -330,6 +330,83 @@ router.get("/shops/:slug/revenue", async (req, res) => {
   return res.json(result);
 });
 
+// POST /customer/bookings/:bookingId/cancel?phone=XXXXXXXXXX
+router.post("/customer/bookings/:bookingId/cancel", async (req, res) => {
+  const phone = (req.query.phone as string)?.trim();
+  const { bookingId } = req.params;
+  if (!phone) return res.status(400).json({ error: "phone required" });
+
+  const bookings = await db
+    .select()
+    .from(bookingsTable)
+    .where(eq(bookingsTable.id, Number(bookingId)));
+
+  if (bookings.length === 0) return res.status(404).json({ error: "Booking not found" });
+  const booking = bookings[0];
+
+  if (booking.customerPhone !== phone) return res.status(403).json({ error: "Not your booking" });
+  if (booking.status !== "confirmed") return res.status(400).json({ error: "Only confirmed bookings can be cancelled" });
+
+  const [updated] = await db
+    .update(bookingsTable)
+    .set({ status: "cancelled" })
+    .where(eq(bookingsTable.id, booking.id))
+    .returning();
+
+  return res.json({ success: true, booking: serializeBooking(updated) });
+});
+
+// GET /customer/bookings/all?phone=XXXXXXXXXX — all bookings for a customer
+router.get("/customer/bookings/all", async (req, res) => {
+  const phone = (req.query.phone as string)?.trim();
+  if (!phone) return res.status(400).json({ error: "phone required" });
+
+  const rows = await db
+    .select()
+    .from(bookingsTable)
+    .where(eq(bookingsTable.customerPhone, phone));
+
+  const shopIds = [...new Set(rows.map((b) => b.shopId))];
+  const shops = shopIds.length
+    ? await db.select().from(shopsTable).where(
+        shopIds.length === 1
+          ? eq(shopsTable.id, shopIds[0])
+          : inArray(shopsTable.id, shopIds)
+      )
+    : [];
+  const shopMap = Object.fromEntries(shops.map((s) => [s.id, s]));
+
+  const serviceIds = [...new Set(rows.map((b) => b.serviceId))];
+  const services = serviceIds.length
+    ? await db.select().from(servicesTable).where(
+        serviceIds.length === 1
+          ? eq(servicesTable.id, serviceIds[0])
+          : inArray(servicesTable.id, serviceIds)
+      )
+    : [];
+  const serviceMap = Object.fromEntries(services.map((s) => [s.id, s]));
+
+  const result = rows
+    .sort((a, b) => (b.slotDate + b.slotTime).localeCompare(a.slotDate + a.slotTime))
+    .map((b) => ({
+      id: b.id,
+      shopName: shopMap[b.shopId]?.shopName ?? "Shop",
+      shopSlug: shopMap[b.shopId]?.slug ?? "",
+      shopCity: shopMap[b.shopId]?.city ?? "",
+      serviceName: serviceMap[b.serviceId]?.name ?? "",
+      slotDate: b.slotDate,
+      slotTime: b.slotTime,
+      slotEndTime: b.slotEndTime,
+      status: b.status,
+      arrivalOtp: b.arrivalOtp,
+      amountPaid: b.amountPaid,
+      totalAmount: b.totalAmount,
+      paymentType: b.paymentType,
+    }));
+
+  return res.json(result);
+});
+
 // GET /customer/bookings?phone=XXXXXXXXXX — upcoming bookings for a customer
 router.get("/customer/bookings", async (req, res) => {
   const phone = (req.query.phone as string)?.trim();

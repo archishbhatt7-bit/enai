@@ -7,6 +7,7 @@ import { CustomerAuthProvider } from "@/lib/customerAuth";
 import Landing from "@/pages/Landing";
 import CustomerLogin from "@/pages/CustomerLogin";
 import CustomerHome from "@/pages/CustomerHome";
+import CustomerBookings from "@/pages/CustomerBookings";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ShopPage from "@/pages/ShopPage";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/customer-login" component={CustomerLogin} />
       <Route path="/customer" component={CustomerHome} />
+      <Route path="/customer/bookings" component={CustomerBookings} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/shop/:slug" component={ShopPage} />

@@ -49,6 +49,8 @@ router.get("/shops", async (req, res) => {
       pausedUntil: shopSafe.pausedUntil?.toISOString() ?? null,
       servicesCount: shopServices.length,
       minPrice,
+      latitude: shop.latitude ?? null,
+      longitude: shop.longitude ?? null,
     };
   });
 

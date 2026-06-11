@@ -2,18 +2,35 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useListShops, useGetCustomerBookings } from "@workspace/api-client-react";
 import { useCustomerAuth } from "@/lib/customerAuth";
-import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight, Star, LogOut, Calendar, Clock } from "lucide-react";
+import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight, Star, LogOut, Calendar, Clock, BookOpen, Navigation } from "lucide-react";
 
 type Shop = NonNullable<ReturnType<typeof useListShops>["data"]>[number];
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function distanceLabel(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m away`;
+  if (km < 10) return `${km.toFixed(1)} km away`;
+  return `${Math.round(km)} km away`;
+}
 
 function ShopCard({
   shop,
   isFav,
+  distKm,
   onToggleFav,
   onClick,
 }: {
   shop: Shop;
   isFav: boolean;
+  distKm: number | null;
   onToggleFav: (e: React.MouseEvent) => void;
   onClick: () => void;
 }) {
@@ -48,6 +65,11 @@ function ShopCard({
               {shop.minPrice != null && (
                 <span className="text-xs font-bold text-amber-600">from ₹{shop.minPrice}</span>
               )}
+              {distKm !== null && (
+                <span className="flex items-center gap-1 text-xs font-semibold text-blue-600">
+                  <Navigation className="w-3 h-3" /> {distanceLabel(distKm)}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -80,6 +102,8 @@ export default function CustomerHome() {
   const { phone, logoutCustomer, toggleFavourite, isFavourite, favourites } = useCustomerAuth();
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
 
   const { data: upcomingBookings = [] } = useGetCustomerBookings(phone ?? "", {
     query: { enabled: !!phone, refetchInterval: 60_000 },
@@ -95,17 +119,47 @@ export default function CustomerHome() {
   const displayShops = isSearching ? (searchResults ?? []) : allShops;
   const loading = isSearching ? searchLoading : isLoading;
 
-  // Sort: favourites first (only when not searching)
-  const sorted = isSearching
-    ? displayShops
-    : [
-        ...displayShops.filter((s) => isFavourite(s.slug)),
-        ...displayShops.filter((s) => !isFavourite(s.slug)),
-      ];
-
   useEffect(() => {
     if (!phone) navigate("/customer-login");
   }, [phone, navigate]);
+
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLat(pos.coords.latitude);
+          setUserLng(pos.coords.longitude);
+        },
+        () => {}
+      );
+    }
+  }, []);
+
+  function getDistKm(shop: Shop): number | null {
+    if (userLat == null || userLng == null) return null;
+    if (!shop.latitude || !shop.longitude) return null;
+    const lat = parseFloat(shop.latitude);
+    const lng = parseFloat(shop.longitude);
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return haversineKm(userLat, userLng, lat, lng);
+  }
+
+  const sorted = (() => {
+    if (isSearching) return displayShops;
+    const favs = displayShops.filter((s) => isFavourite(s.slug));
+    const rest = displayShops.filter((s) => !isFavourite(s.slug));
+    if (userLat != null && userLng != null) {
+      rest.sort((a, b) => {
+        const da = getDistKm(a);
+        const db = getDistKm(b);
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return da - db;
+      });
+    }
+    return [...favs, ...rest];
+  })();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +178,6 @@ export default function CustomerHome() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Dark header */}
       <div className="bg-slate-900 px-5 pt-10 pb-8">
         <div className="flex items-center justify-between mb-5">
           <button
@@ -134,6 +187,13 @@ export default function CustomerHome() {
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/customer/bookings")}
+              className="flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg"
+              title="My Bookings"
+            >
+              <BookOpen className="w-3.5 h-3.5" /> My Bookings
+            </button>
             <span className="text-slate-400 text-xs">+91 {phone}</span>
             <button
               onClick={() => { logoutCustomer(); navigate("/"); }}
@@ -147,7 +207,7 @@ export default function CustomerHome() {
 
         <h1 className="text-2xl font-black text-white mb-0.5">Find a Barbershop</h1>
         <p className="text-slate-400 text-sm">
-          {favourites.length > 0
+          {userLat ? "Sorted by distance from you" : favourites.length > 0
             ? `${favourites.length} favourite${favourites.length !== 1 ? "s" : ""} saved`
             : "Search by shop name or city"}
         </p>
@@ -182,7 +242,6 @@ export default function CustomerHome() {
         </form>
       </div>
 
-      {/* Upcoming Bookings Banner */}
       {upcomingBookings.length > 0 && (
         <div className="px-4 pt-4 pb-1 space-y-2">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
@@ -220,7 +279,6 @@ export default function CustomerHome() {
         </div>
       )}
 
-      {/* Results */}
       <div className="flex-1 px-4 py-5">
         {loading && (
           <div className="space-y-3">
@@ -242,18 +300,14 @@ export default function CustomerHome() {
 
         {!loading && sorted.length > 0 && (
           <div className="space-y-3">
-            {/* Favourites section header */}
             {!isSearching && favourites.length > 0 && (
               <div className="flex items-center gap-2 px-1 mb-1">
                 <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                <p className="text-xs text-amber-600 font-bold uppercase tracking-wider">
-                  Favourites
-                </p>
+                <p className="text-xs text-amber-600 font-bold uppercase tracking-wider">Favourites</p>
               </div>
             )}
 
             {sorted.map((shop, idx) => {
-              // Insert "Other Shops" divider when switching from favs to rest
               const showDivider =
                 !isSearching &&
                 favourites.length > 0 &&
@@ -264,13 +318,20 @@ export default function CustomerHome() {
                   {showDivider && (
                     <div className="flex items-center gap-2 px-1 mt-4 mb-1">
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                        Other Shops
+                        {userLat ? "Nearby Shops" : "Other Shops"}
                       </p>
+                    </div>
+                  )}
+                  {!isSearching && favourites.length === 0 && idx === 0 && userLat && (
+                    <div className="flex items-center gap-2 px-1 mb-1">
+                      <Navigation className="w-3.5 h-3.5 text-blue-500" />
+                      <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">Nearest First</p>
                     </div>
                   )}
                   <ShopCard
                     shop={shop}
                     isFav={isFavourite(shop.slug)}
+                    distKm={getDistKm(shop)}
                     onToggleFav={(e) => handleFavToggle(e, shop.slug)}
                     onClick={() => navigate(`/shop/${shop.slug}`)}
                   />

@@ -46,6 +46,9 @@ router.post("/auth/register", async (req, res) => {
       numBarbers: data.numBarbers,
       openTime: data.openTime ?? "09:00",
       closeTime: data.closeTime ?? "20:00",
+      pincode: (data as any).pincode ?? null,
+      latitude: (data as any).latitude ?? null,
+      longitude: (data as any).longitude ?? null,
     })
     .returning();
 

@@ -522,7 +522,8 @@ export default function ShopPage() {
                   <div>
                     <p className="font-bold text-slate-900">Token Booking</p>
                     <p className="text-2xl font-black text-amber-600 mt-1">₹1</p>
-                    <p className="text-xs text-slate-500 mt-1">Pay ₹{selectedServiceObj.price - 1} directly to barber after service</p>
+                    <p className="text-xs text-slate-500 mt-1">Pay ₹{selectedServiceObj.price} directly to barber after service</p>
+                    <p className="text-xs text-amber-600 font-medium mt-0.5">₹1 platform fee charged now</p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${
                     paymentType === "token" ? "border-amber-500 bg-amber-500" : "border-slate-300"
@@ -542,7 +543,8 @@ export default function ShopPage() {
                   <div>
                     <p className="font-bold text-slate-900">Full Payment</p>
                     <p className="text-2xl font-black text-slate-900 mt-1">₹{selectedServiceObj.price}</p>
-                    <p className="text-xs text-slate-500 mt-1">Pay full amount now — no booking fee charged</p>
+                    <p className="text-xs text-slate-500 mt-1">Pay full amount now</p>
+                    <p className="text-xs text-green-600 font-medium mt-0.5">₹0 platform fee</p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${
                     paymentType === "full" ? "border-amber-500 bg-amber-500" : "border-slate-300"

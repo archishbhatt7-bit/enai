@@ -21,6 +21,9 @@ export const shopsTable = pgTable("shops", {
   profilePhoto: text("profile_photo"),
   interiorPhotos: json("interior_photos").$type<string[]>().default([]),
   portfolioPhotos: json("portfolio_photos").$type<string[]>().default([]),
+  pincode: text("pincode"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

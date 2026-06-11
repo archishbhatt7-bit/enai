@@ -642,6 +642,12 @@ components:
         closeTime:
           type: string
           description: "HH:MM format e.g. 20:00"
+        pincode:
+          type: string
+        latitude:
+          type: string
+        longitude:
+          type: string
 
     LoginInput:
       type: object
@@ -754,6 +760,10 @@ components:
           type: integer
         minPrice:
           type: ["integer", "null"]
+        latitude:
+          type: ["string", "null"]
+        longitude:
+          type: ["string", "null"]
       required: [id, slug, shopName, ownerName, city, isOpen, isPaused, numChairs, servicesCount]
 
     ShopProfile:

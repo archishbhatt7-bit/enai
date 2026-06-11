@@ -28,6 +28,9 @@ export interface BarberRegistrationInput {
   openTime?: string;
   /** HH:MM format e.g. 20:00 */
   closeTime?: string;
+  pincode?: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface LoginInput {
@@ -91,6 +94,10 @@ export interface ShopSummary {
   servicesCount: number;
   /** @nullable */
   minPrice?: number | null;
+  /** @nullable */
+  latitude?: string | null;
+  /** @nullable */
+  longitude?: string | null;
 }
 
 export interface Service {

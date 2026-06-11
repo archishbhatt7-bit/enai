@@ -1789,6 +1789,101 @@ export const getRevenueStats = async (slug: string, options?: RequestInit): Prom
 
 
 
+// ── Customer all bookings + cancel ────────────────────────────────────────────
+
+export interface CustomerBooking {
+  id: number;
+  shopName: string;
+  shopSlug: string;
+  shopCity: string;
+  serviceName: string;
+  slotDate: string;
+  slotTime: string;
+  slotEndTime: string;
+  status: string;
+  arrivalOtp: string | null;
+  amountPaid: number;
+  totalAmount: number;
+  paymentType: string;
+}
+
+export const getAllCustomerBookings = async (
+  phone: string,
+  options?: RequestInit
+): Promise<CustomerBooking[]> =>
+  customFetch<CustomerBooking[]>(
+    `/api/customer/bookings/all?phone=${encodeURIComponent(phone)}`,
+    options
+  );
+
+export const getGetAllCustomerBookingsQueryKey = (phone: string) =>
+  [`/api/customer/bookings/all`, phone] as const;
+
+export const getGetAllCustomerBookingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAllCustomerBookings>>,
+  TError = ErrorType<unknown>
+>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAllCustomerBookings>>,
+      TError,
+      TData
+    >;
+  }
+) => {
+  const { query: queryOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetAllCustomerBookingsQueryKey(phone);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllCustomerBookings>>> =
+    () => getAllCustomerBookings(phone);
+  return { queryKey, queryFn, enabled: !!phone, ...queryOptions };
+};
+
+export const useGetAllCustomerBookings = <
+  TData = Awaited<ReturnType<typeof getAllCustomerBookings>>,
+  TError = ErrorType<unknown>
+>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAllCustomerBookings>>,
+      TError,
+      TData
+    >;
+  }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getGetAllCustomerBookingsQueryOptions(phone, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+  return { ...query, queryKey: queryOptions.queryKey };
+};
+
+export const cancelCustomerBooking = async (
+  bookingId: number,
+  phone: string,
+  options?: RequestInit
+): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(
+    `/api/customer/bookings/${bookingId}/cancel?phone=${encodeURIComponent(phone)}`,
+    { ...options, method: 'POST' }
+  );
+
+export const useCancelCustomerBooking = (options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelCustomerBooking>>,
+    ErrorType<unknown>,
+    { bookingId: number; phone: string }
+  >;
+}) => {
+  const { mutation: mutationOptions } = options ?? {};
+  return useMutation({
+    mutationFn: ({ bookingId, phone }: { bookingId: number; phone: string }) =>
+      cancelCustomerBooking(bookingId, phone),
+    ...mutationOptions,
+  });
+};
+
 // ── Customer upcoming bookings ────────────────────────────────────────────────
 
 export interface CustomerUpcomingBooking {
