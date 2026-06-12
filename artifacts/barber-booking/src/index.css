@@ -66,7 +66,18 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE — Sharp barbershop aesthetic: deep charcoal + amber accent */
+@keyframes splashScissor {
+  from { left: -100px; }
+  to { left: calc(100% + 100px); }
+}
+
+@keyframes gpsPulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  70% { transform: scale(3); opacity: 0; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* LIGHT MODE — Deep Blue + Emerald */
 :root {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);

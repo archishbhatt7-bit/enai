@@ -14,9 +14,21 @@ interface Props {
 
 function makeIcon(L: any) {
   return L.divIcon({
-    html: '<div style="width:22px;height:22px;background:#f59e0b;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',
+    html: '<div style="width:22px;height:22px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(37,99,235,0.5)"></div>',
     iconSize: [22, 22],
     iconAnchor: [11, 11],
+    className: "",
+  });
+}
+
+function makeGpsIcon(L: any) {
+  return L.divIcon({
+    html: `<div style="position:relative;width:28px;height:28px">
+      <div style="position:absolute;inset:0;background:rgba(37,99,235,0.25);border-radius:50%;animation:gpsPulse 1.8s ease-out infinite"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>
+    </div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
     className: "",
   });
 }
@@ -92,8 +104,9 @@ export default function LocationPicker({ onSelect, onClose, initialLat, initialL
           mapRef.current.setView([la, lo], 15);
           if (markerRef.current) {
             markerRef.current.setLatLng([la, lo]);
+            markerRef.current.setIcon(makeGpsIcon(window.L));
           } else {
-            markerRef.current = window.L.marker([la, lo], { icon: makeIcon(window.L) }).addTo(mapRef.current);
+            markerRef.current = window.L.marker([la, lo], { icon: makeGpsIcon(window.L) }).addTo(mapRef.current);
           }
         }
       },

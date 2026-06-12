@@ -41,9 +41,17 @@ function ShopCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex gap-3 flex-1 min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <Scissors className="w-5 h-5 text-blue-700" />
-          </div>
+          {shop.profilePhoto ? (
+            <img
+              src={`/api/storage${shop.profilePhoto}`}
+              alt={shop.shopName}
+              className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-slate-100"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <Scissors className="w-5 h-5 text-blue-700" />
+            </div>
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-bold text-slate-900">{shop.shopName}</h3>

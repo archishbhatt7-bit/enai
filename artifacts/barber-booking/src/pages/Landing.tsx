@@ -9,7 +9,7 @@ export default function Landing() {
       {/* Top — logo + tagline */}
       <div className="flex-1 flex flex-col items-center justify-center text-center">
         <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl mb-8">
-          <Scissors className="w-10 h-10 text-slate-900" />
+          <Scissors className="w-10 h-10 text-white" />
         </div>
         <h1 className="text-5xl font-black text-white tracking-tight">SlotCut</h1>
         <p className="mt-3 text-slate-400 text-lg">Book your barber, skip the wait.</p>

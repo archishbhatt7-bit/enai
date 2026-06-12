@@ -35,8 +35,11 @@ import {
   ChevronRight,
   Camera,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import ImageUpload, { photoUrl } from "@/components/ImageUpload";
+import WeeklyScheduleModal from "@/components/WeeklyScheduleModal";
+import AvatarUpload from "@/components/AvatarCrop";
 import {
   BarChart,
   Bar,
@@ -115,20 +118,34 @@ function ClockDial({
         {/* Clock face */}
         <circle cx={cx} cy={cy} r={r} fill="white" stroke="#e2e8f0" strokeWidth="2" />
 
-        {/* Hour ticks + numbers */}
-        {Array.from({ length: 12 }, (_, i) => {
-          const angle = i * 30;
-          const major = i % 3 === 0;
-          const outer = polar(angle, r - 3);
-          const inner = polar(angle, major ? r - 14 : r - 8);
-          const numPos = major ? polar(angle, r - 23) : null;
+        {/* Booking pie slices — rendered BEFORE ticks so ticks stay visible on top */}
+        {chair.bookings.map((b) => {
+          let startA = timeToAngleDeg(b.slotTime);
+          let endA = timeToAngleDeg(b.slotEndTime);
+          if (endA <= startA) endA += 360;
+          const color = CLOCK_COLORS[b.status] ?? "#94a3b8";
+          return (
+            <path key={b.id} d={pieSlice(startA, endA)} fill={color} opacity="0.82">
+              <title>{b.customerName} — {b.service?.name ?? ""} ({b.slotTime}–{b.slotEndTime})</title>
+            </path>
+          );
+        })}
+
+        {/* 24 ticks: half-hour minor (15°) + hour (30°) + major quarter-hour labels */}
+        {Array.from({ length: 24 }, (_, i) => {
+          const angle = i * 15;
+          const isMajor = i % 6 === 0;    // 0°,90°,180°,270° → 12,3,6,9
+          const isHour  = i % 2 === 0;    // every 30° → full hour mark
+          const outer   = polar(angle, r - 3);
+          const inner   = polar(angle, isMajor ? r - 14 : isHour ? r - 9 : r - 6);
+          const numPos  = isMajor ? polar(angle, r - 23) : null;
           return (
             <g key={i}>
               <line
                 x1={inner.x.toFixed(2)} y1={inner.y.toFixed(2)}
                 x2={outer.x.toFixed(2)} y2={outer.y.toFixed(2)}
-                stroke={major ? "#94a3b8" : "#cbd5e1"}
-                strokeWidth={major ? 2.5 : 1}
+                stroke={isMajor ? "#64748b" : isHour ? "#cbd5e1" : "#e9edf2"}
+                strokeWidth={isMajor ? 2.5 : isHour ? 1.5 : 1}
                 strokeLinecap="round"
               />
               {numPos && (
@@ -144,20 +161,7 @@ function ClockDial({
           );
         })}
 
-        {/* Booking pie slices */}
-        {chair.bookings.map((b) => {
-          let startA = timeToAngleDeg(b.slotTime);
-          let endA = timeToAngleDeg(b.slotEndTime);
-          if (endA <= startA) endA += 360;
-          const color = CLOCK_COLORS[b.status] ?? "#94a3b8";
-          return (
-            <path key={b.id} d={pieSlice(startA, endA)} fill={color} opacity="0.85">
-              <title>{b.customerName} — {b.service?.name ?? ""} ({b.slotTime}–{b.slotEndTime})</title>
-            </path>
-          );
-        })}
-
-        {/* Centre cap */}
+        {/* Centre cap — on top of everything */}
         <circle cx={cx} cy={cy} r={innerR} fill="white" stroke="#e2e8f0" strokeWidth="2" />
 
         {/* Current-time hand (today only) */}
@@ -172,7 +176,7 @@ function ClockDial({
           </>
         )}
 
-        {/* Chair number below clock */}
+        {/* Chair number */}
         <text x={cx} y={158} textAnchor="middle" fontSize="12" fontWeight="700" fill="#475569">
           Chair {chair.chairNumber}
         </text>
@@ -229,6 +233,8 @@ export default function Dashboard() {
   const [portfolioError, setPortfolioError] = useState("");
   const [interiorPaths, setInteriorPaths] = useState<string[] | null>(null);
   const [profilePath, setProfilePath] = useState<string | null | undefined>(undefined);
+  const [showWeeklyModal, setShowWeeklyModal] = useState(false);
+  const [weeklyModalSaving, setWeeklyModalSaving] = useState(false);
 
   // Redirect if not authenticated or wrong shop
   useEffect(() => {
@@ -236,6 +242,21 @@ export default function Dashboard() {
       navigate("/login");
     }
   }, [isAuthenticated, shop, slug, navigate]);
+
+  // Monday → show weekly availability popup
+  useEffect(() => {
+    if (!slug) return;
+    const today = new Date();
+    if (today.getDay() !== 1) return; // only Monday
+    const d = today;
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+    const weekKey = `slotcut_weekly_${slug}_${d.getFullYear()}-W${weekNum}`;
+    if (!localStorage.getItem(weekKey)) {
+      setShowWeeklyModal(true);
+      localStorage.setItem(weekKey, "1");
+    }
+  }, [slug]);
 
   const { data: dashboard, isLoading: dashLoading } = useGetShopDashboard(slug, {
     query: { queryKey: getGetShopDashboardQueryKey(slug), refetchInterval: 30_000 },
@@ -319,6 +340,19 @@ export default function Dashboard() {
     },
   });
 
+  const handleSaveSchedule = async (days: number[]) => {
+    setWeeklyModalSaving(true);
+    try {
+      await fetch(`/api/shops/${slug}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ openDays: days }),
+      });
+    } catch {}
+    setWeeklyModalSaving(false);
+    setShowWeeklyModal(false);
+  };
+
   const handleToggleOpen = () => {
     if (!shop) return;
     updateStatusMutation.mutate({ slug, data: { isOpen: !shop.isOpen } });
@@ -363,6 +397,7 @@ export default function Dashboard() {
   });
 
   return (
+    <>
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar + main layout */}
       <div className="flex h-screen overflow-hidden">
@@ -371,7 +406,7 @@ export default function Dashboard() {
           <div className="p-5 border-b border-slate-800">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
-                <Scissors className="w-3.5 h-3.5 text-slate-900" />
+                <Scissors className="w-3.5 h-3.5 text-white" />
               </div>
               <span className="font-bold text-sm">SlotCut</span>
             </div>
@@ -442,6 +477,12 @@ export default function Dashboard() {
               <p className="text-xs text-slate-400">{shop.city} · {shop.numChairs} chairs</p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowWeeklyModal(true)}
+                className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <Calendar className="w-3.5 h-3.5" /> Schedule
+              </button>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                 shop.isOpen && !shop.isPaused ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
               }`}>
@@ -857,7 +898,7 @@ export default function Dashboard() {
                           contentStyle={{ fontSize: 11, border: "1px solid #e2e8f0", borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}
                           formatter={(val: any) => [`₹${val}`, "Revenue"]}
                         />
-                        <Bar dataKey="revenue" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revenue" fill="#2563eb" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -928,5 +969,16 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+
+    {showWeeklyModal && (
+      <WeeklyScheduleModal
+        currentOpenDays={(shopProfile?.shop as any)?.openDays ?? [0, 1, 2, 3, 4, 5, 6]}
+        onSave={handleSaveSchedule}
+        onClose={() => setShowWeeklyModal(false)}
+        isSaving={weeklyModalSaving}
+      />
+    )}
+    </>
   );
 }
+

@@ -284,4 +284,26 @@ router.delete("/shops/:slug/portfolio/:index", async (req, res) => {
   return res.json({ portfolioPhotos: updated });
 });
 
+// PATCH /shops/:slug/schedule
+router.patch("/shops/:slug/schedule", async (req, res) => {
+  const { slug } = req.params;
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+
+  const { openDays } = req.body as { openDays: number[] };
+  if (!Array.isArray(openDays)) {
+    return res.status(400).json({ error: "openDays must be an array" });
+  }
+  const valid = openDays.filter((d) => typeof d === "number" && d >= 0 && d <= 6);
+
+  const [updated] = await db
+    .update(shopsTable)
+    .set({ openDays: valid })
+    .where(eq(shopsTable.id, shop.id))
+    .returning();
+
+  return res.json({ openDays: updated.openDays });
+});
+
 export default router;
