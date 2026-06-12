@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useListShops, useGetCustomerBookings } from "@workspace/api-client-react";
 import { useCustomerAuth } from "@/lib/customerAuth";
 import { ArrowLeft, Search, MapPin, Users, Scissors, ChevronRight, Star, LogOut, Calendar, Clock, BookOpen, Navigation } from "lucide-react";
+import CustomerOnboarding, { getCustomerProfile, saveCustomerProfile, type CustomerProfile } from "@/components/CustomerOnboarding";
 
 type Shop = NonNullable<ReturnType<typeof useListShops>["data"]>[number];
 
@@ -112,6 +113,10 @@ export default function CustomerHome() {
   const [submitted, setSubmitted] = useState("");
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [profile, setProfile] = useState<CustomerProfile | null>(() =>
+    phone ? getCustomerProfile(phone) : null
+  );
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { data: upcomingBookings = [] } = useGetCustomerBookings(phone ?? "", {
     query: { enabled: !!phone, refetchInterval: 60_000 },
@@ -130,6 +135,16 @@ export default function CustomerHome() {
   useEffect(() => {
     if (!phone) navigate("/customer-login");
   }, [phone, navigate]);
+
+  useEffect(() => {
+    if (!phone) return;
+    const p = getCustomerProfile(phone);
+    if (!p) {
+      const timer = setTimeout(() => setShowOnboarding(true), 400);
+      return () => clearTimeout(timer);
+    }
+    setProfile(p);
+  }, [phone]);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -184,6 +199,11 @@ export default function CustomerHome() {
     toggleFavourite(slug);
   };
 
+  const handleOnboardingDone = (p: CustomerProfile) => {
+    setProfile(p);
+    setShowOnboarding(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <div className="bg-slate-900 px-5 pt-10 pb-8">
@@ -213,11 +233,13 @@ export default function CustomerHome() {
           </div>
         </div>
 
-        <h1 className="text-2xl font-black text-white mb-0.5">Find a Barbershop</h1>
+        <h1 className="text-2xl font-black text-white mb-0.5">
+          {profile?.name ? `Hey, ${profile.name.split(" ")[0]}!` : "Find a Barbershop"}
+        </h1>
         <p className="text-slate-400 text-sm">
           {userLat ? "Sorted by distance from you" : favourites.length > 0
             ? `${favourites.length} favourite${favourites.length !== 1 ? "s" : ""} saved`
-            : "Search by shop name or city"}
+            : profile?.name ? "Find a barbershop near you" : "Search by shop name or city"}
         </p>
 
         <form onSubmit={handleSearch} className="mt-5 flex gap-2">
@@ -349,6 +371,10 @@ export default function CustomerHome() {
           </div>
         )}
       </div>
+
+      {showOnboarding && phone && (
+        <CustomerOnboarding phone={phone} onDone={handleOnboardingDone} />
+      )}
     </div>
   );
 }

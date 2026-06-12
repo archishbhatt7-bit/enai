@@ -66,9 +66,14 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-@keyframes splashScissor {
-  from { left: -100px; }
-  to { left: calc(100% + 100px); }
+@keyframes scissorSlide {
+  from { transform: translate(-200%, -50%); }
+  to   { transform: translate(-50%, -50%); }
+}
+
+@keyframes flashFade {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 @keyframes gpsPulse {
