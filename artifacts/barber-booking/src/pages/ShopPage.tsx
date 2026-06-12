@@ -24,6 +24,63 @@ import { photoUrl } from "@/components/ImageUpload";
 
 declare global { interface Window { L: any; } }
 
+const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+type DayHours = { open: string; close: string; breakStart?: string; breakEnd?: string };
+
+function ShopHours({
+  openDays,
+  openHours,
+  fallbackOpen,
+  fallbackClose,
+}: {
+  openDays?: number[];
+  openHours?: Record<string, DayHours>;
+  fallbackOpen: string;
+  fallbackClose: string;
+}) {
+  const today = new Date().getDay();
+  if (!openDays?.length && !openHours) {
+    return <p className="text-sm text-slate-700 font-medium">{fallbackOpen} – {fallbackClose}</p>;
+  }
+  const days = openDays ?? [0, 1, 2, 3, 4, 5, 6];
+  return (
+    <div className="space-y-1">
+      {DAY_ABBR.map((abbr, i) => {
+        const isOpen = days.includes(i);
+        const h: DayHours | undefined = openHours?.[String(i)];
+        const isToday = i === today;
+        return (
+          <div
+            key={abbr}
+            className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1 ${isToday ? "bg-blue-50" : ""}`}
+          >
+            <span className={`w-8 font-semibold text-xs ${isToday ? "text-blue-700" : "text-slate-500"}`}>
+              {abbr}
+            </span>
+            {isOpen ? (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className={`font-medium ${isToday ? "text-blue-900" : "text-slate-800"}`}>
+                  {h ? `${h.open} – ${h.close}` : `${fallbackOpen} – ${fallbackClose}`}
+                </span>
+                {h?.breakStart && (
+                  <span className="text-[11px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">
+                    break {h.breakStart}–{h.breakEnd}
+                  </span>
+                )}
+                {isToday && (
+                  <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Today</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-slate-400 text-xs">Closed</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -435,10 +492,15 @@ export default function ShopPage() {
               </div>
             )}
 
-            <div className="mt-6 p-4 bg-slate-100 rounded-lg">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Shop hours</p>
-              <p className="text-sm text-slate-700 font-medium">{shop.openTime} – {shop.closeTime}</p>
-              <p className="text-xs text-slate-400 mt-1">{shop.numChairs} chair{shop.numChairs !== 1 ? "s" : ""} • {shop.numBarbers} barber{shop.numBarbers !== 1 ? "s" : ""}</p>
+            <div className="mt-6 p-4 bg-slate-100 rounded-xl">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Shop Hours</p>
+              <ShopHours
+                openDays={(shop as any).openDays}
+                openHours={(shop as any).openHours}
+                fallbackOpen={shop.openTime}
+                fallbackClose={shop.closeTime}
+              />
+              <p className="text-xs text-slate-400 mt-3">{shop.numChairs} chair{shop.numChairs !== 1 ? "s" : ""} • {shop.numBarbers} barber{shop.numBarbers !== 1 ? "s" : ""}</p>
             </div>
 
             {/* Interior photos gallery */}

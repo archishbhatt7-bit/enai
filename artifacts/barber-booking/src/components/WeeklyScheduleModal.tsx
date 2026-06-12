@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Clock, X, Check, Copy } from "lucide-react";
+import { Clock, X, Check, Copy, Coffee } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-type DayHours = { open: string; close: string };
-type HoursMap = Record<string, DayHours>;
+export type DayHours = {
+  open: string;
+  close: string;
+  breakStart?: string;
+  breakEnd?: string;
+};
+export type HoursMap = Record<string, DayHours>;
 
 interface Props {
   currentOpenDays: number[];
@@ -42,28 +47,37 @@ export default function WeeklyScheduleModal({
     });
   };
 
-  const setHour = (day: number, field: "open" | "close", value: string) => {
+  const setField = (day: number, field: keyof DayHours, value: string | undefined) => {
     setHours((prev) => ({
       ...prev,
       [String(day)]: { ...prev[String(day)], [field]: value },
     }));
   };
 
+  const toggleBreak = (day: number) => {
+    const h = hours[String(day)];
+    if (h.breakStart) {
+      const { breakStart, breakEnd, ...rest } = h;
+      setHours((prev) => ({ ...prev, [String(day)]: rest }));
+    } else {
+      setHours((prev) => ({
+        ...prev,
+        [String(day)]: { ...h, breakStart: "13:00", breakEnd: "14:00" },
+      }));
+    }
+  };
+
   const copyToAll = (day: number) => {
     const src = hours[String(day)];
     const next: HoursMap = {};
-    for (let i = 0; i < 7; i++) {
-      next[String(i)] = { ...src };
-    }
+    for (let i = 0; i < 7; i++) next[String(i)] = { ...src };
     setHours(next);
   };
 
   const handleSave = () => {
     const days = Array.from(openDays).sort();
     const filteredHours: HoursMap = {};
-    for (const d of days) {
-      filteredHours[String(d)] = hours[String(d)];
-    }
+    for (const d of days) filteredHours[String(d)] = hours[String(d)];
     onSave(days, filteredHours);
   };
 
@@ -71,7 +85,7 @@ export default function WeeklyScheduleModal({
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-white w-full sm:max-w-md sm:rounded-2xl overflow-hidden max-h-[95dvh] flex flex-col">
         {/* Header */}
-        <div className="bg-blue-950 px-5 pt-6 pb-5 flex-shrink-0">
+        <div className="bg-blue-950 px-5 pt-6 pb-4 flex-shrink-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
@@ -83,26 +97,25 @@ export default function WeeklyScheduleModal({
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-blue-200 text-xs">
-            Toggle days open/closed and set opening &amp; closing times.
-          </p>
+          <p className="text-blue-200 text-xs">Set open/close times and optional break per day.</p>
         </div>
 
         {/* Scrollable day list */}
         <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
           {DAYS.map((abbr, i) => {
             const isOpen = openDays.has(i);
-            const dayHours = hours[String(i)];
+            const h = hours[String(i)];
+            const hasBreak = !!h.breakStart;
+
             return (
               <div
                 key={abbr}
                 className={`rounded-xl border-2 transition-all ${
-                  isOpen ? "border-blue-200 bg-blue-50" : "border-slate-100 bg-slate-50"
+                  isOpen ? "border-blue-200 bg-blue-50/60" : "border-slate-100 bg-slate-50"
                 }`}
               >
-                {/* Day row header */}
-                <div className="flex items-center gap-3 px-3 pt-3 pb-2">
-                  {/* Toggle pill */}
+                {/* Day toggle row */}
+                <div className="flex items-center gap-3 px-3 py-2.5">
                   <button
                     type="button"
                     onClick={() => toggleDay(i)}
@@ -116,51 +129,89 @@ export default function WeeklyScheduleModal({
                       }`}
                     />
                   </button>
-                  <span className={`font-bold text-sm w-24 ${isOpen ? "text-slate-900" : "text-slate-400"}`}>
+                  <span className={`font-bold text-sm flex-1 ${isOpen ? "text-slate-900" : "text-slate-400"}`}>
                     {FULL_DAYS[i]}
                   </span>
                   {isOpen ? (
-                    <span className="ml-auto text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Check className="w-3 h-3" /> Open
                     </span>
                   ) : (
-                    <span className="ml-auto text-xs font-medium text-slate-400">Closed</span>
+                    <span className="text-xs text-slate-400 font-medium">Closed</span>
                   )}
                 </div>
 
                 {/* Time pickers — only when open */}
                 {isOpen && (
-                  <div className="px-3 pb-3 flex items-center gap-2">
-                    <div className="flex-1">
-                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
-                        Opens
-                      </label>
-                      <input
-                        type="time"
-                        value={dayHours.open}
-                        onChange={(e) => setHour(i, "open", e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                  <div className="px-3 pb-3 space-y-2">
+                    {/* Open / Close row */}
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Opens</label>
+                        <input
+                          type="time"
+                          value={h.open}
+                          onChange={(e) => setField(i, "open", e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">Closes</label>
+                        <input
+                          type="time"
+                          value={h.close}
+                          onChange={(e) => setField(i, "close", e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        title="Copy to all days"
+                        onClick={() => copyToAll(i)}
+                        className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
-                        Closes
-                      </label>
-                      <input
-                        type="time"
-                        value={dayHours.close}
-                        onChange={(e) => setHour(i, "close", e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
+
+                    {/* Break toggle */}
                     <button
                       type="button"
-                      title="Copy these hours to all open days"
-                      onClick={() => copyToAll(i)}
-                      className="mt-4 flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                      onClick={() => toggleBreak(i)}
+                      className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors w-full ${
+                        hasBreak
+                          ? "bg-orange-50 border-orange-200 text-orange-700"
+                          : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                      }`}
                     >
-                      <Copy className="w-3.5 h-3.5" />
+                      <Coffee className="w-3.5 h-3.5" />
+                      {hasBreak ? "Remove break" : "+ Add break / lunch pause"}
                     </button>
+
+                    {/* Break time pickers */}
+                    {hasBreak && (
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-semibold text-orange-400 uppercase tracking-wide block mb-1">Break starts</label>
+                          <input
+                            type="time"
+                            value={h.breakStart ?? "13:00"}
+                            onChange={(e) => setField(i, "breakStart", e.target.value)}
+                            className="w-full border border-orange-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] font-semibold text-orange-400 uppercase tracking-wide block mb-1">Break ends</label>
+                          <input
+                            type="time"
+                            value={h.breakEnd ?? "14:00"}
+                            onChange={(e) => setField(i, "breakEnd", e.target.value)}
+                            className="w-full border border-orange-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                          />
+                        </div>
+                        <div className="w-8" />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -168,7 +219,7 @@ export default function WeeklyScheduleModal({
           })}
         </div>
 
-        {/* Summary + Save */}
+        {/* Footer */}
         <div className="px-4 pb-5 pt-3 border-t border-slate-100 flex-shrink-0 space-y-3">
           <div className="bg-slate-50 rounded-xl px-3 py-2 text-center">
             {openDays.size === 0 ? (
@@ -177,10 +228,7 @@ export default function WeeklyScheduleModal({
               <p className="text-xs text-slate-600">
                 Open{" "}
                 <span className="font-semibold text-slate-900">
-                  {Array.from(openDays)
-                    .sort()
-                    .map((d) => DAYS[d])
-                    .join(", ")}
+                  {Array.from(openDays).sort().map((d) => DAYS[d]).join(", ")}
                 </span>
               </p>
             )}
