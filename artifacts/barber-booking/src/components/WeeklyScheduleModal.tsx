@@ -1,20 +1,39 @@
 import { useState } from "react";
-import { Calendar, X, Check } from "lucide-react";
+import { Clock, X, Check, Copy } from "lucide-react";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+type DayHours = { open: string; close: string };
+type HoursMap = Record<string, DayHours>;
+
 interface Props {
   currentOpenDays: number[];
-  onSave: (days: number[]) => void;
+  currentOpenHours: HoursMap;
+  onSave: (days: number[], hours: HoursMap) => void;
   onClose: () => void;
   isSaving?: boolean;
 }
 
-export default function WeeklyScheduleModal({ currentOpenDays, onSave, onClose, isSaving }: Props) {
-  const [openDays, setOpenDays] = useState<Set<number>>(new Set(currentOpenDays));
+const DEFAULT_HOURS: DayHours = { open: "09:00", close: "20:00" };
 
-  const toggle = (day: number) => {
+export default function WeeklyScheduleModal({
+  currentOpenDays,
+  currentOpenHours,
+  onSave,
+  onClose,
+  isSaving,
+}: Props) {
+  const [openDays, setOpenDays] = useState<Set<number>>(new Set(currentOpenDays));
+  const [hours, setHours] = useState<HoursMap>(() => {
+    const base: HoursMap = {};
+    for (let i = 0; i < 7; i++) {
+      base[String(i)] = currentOpenHours?.[String(i)] ?? { ...DEFAULT_HOURS };
+    }
+    return base;
+  });
+
+  const toggleDay = (day: number) => {
     setOpenDays((prev) => {
       const next = new Set(prev);
       if (next.has(day)) next.delete(day);
@@ -23,102 +42,166 @@ export default function WeeklyScheduleModal({ currentOpenDays, onSave, onClose, 
     });
   };
 
-  const allOpen = openDays.size === 7;
-  const toggleAll = () => {
-    if (allOpen) setOpenDays(new Set());
-    else setOpenDays(new Set([0, 1, 2, 3, 4, 5, 6]));
+  const setHour = (day: number, field: "open" | "close", value: string) => {
+    setHours((prev) => ({
+      ...prev,
+      [String(day)]: { ...prev[String(day)], [field]: value },
+    }));
+  };
+
+  const copyToAll = (day: number) => {
+    const src = hours[String(day)];
+    const next: HoursMap = {};
+    for (let i = 0; i < 7; i++) {
+      next[String(i)] = { ...src };
+    }
+    setHours(next);
+  };
+
+  const handleSave = () => {
+    const days = Array.from(openDays).sort();
+    const filteredHours: HoursMap = {};
+    for (const d of days) {
+      filteredHours[String(d)] = hours[String(d)];
+    }
+    onSave(days, filteredHours);
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden">
-        <div className="bg-blue-950 px-5 pt-6 pb-5">
+      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl overflow-hidden max-h-[95dvh] flex flex-col">
+        {/* Header */}
+        <div className="bg-blue-950 px-5 pt-6 pb-5 flex-shrink-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-white" />
+                <Clock className="w-4 h-4 text-white" />
               </div>
-              <h3 className="font-black text-white text-lg">Weekly Schedule</h3>
+              <h3 className="font-black text-white text-lg">Shop Hours</h3>
             </div>
-            <button onClick={onClose} className="text-white/40 hover:text-white/80">
+            <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
           <p className="text-blue-200 text-xs">
-            Tap a day to toggle it open or closed for this week.
+            Toggle days open/closed and set opening &amp; closing times.
           </p>
         </div>
 
-        <div className="p-5 space-y-3">
-          {/* Toggle all */}
-          <button
-            type="button"
-            onClick={toggleAll}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
-              allOpen
-                ? "bg-blue-50 border-blue-200 text-blue-700"
-                : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {allOpen ? "✓ Open every day" : "Set all days open"}
-          </button>
-
-          {/* Day grid */}
-          <div className="grid grid-cols-7 gap-1.5">
-            {DAYS.map((day, i) => {
-              const isOpen = openDays.has(i);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => toggle(i)}
-                  className={`flex flex-col items-center py-2.5 rounded-xl border-2 transition-all ${
-                    isOpen
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-white border-slate-200 text-slate-400 hover:border-blue-200"
-                  }`}
-                >
-                  <span className="text-xs font-bold">{day}</span>
+        {/* Scrollable day list */}
+        <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+          {DAYS.map((abbr, i) => {
+            const isOpen = openDays.has(i);
+            const dayHours = hours[String(i)];
+            return (
+              <div
+                key={abbr}
+                className={`rounded-xl border-2 transition-all ${
+                  isOpen ? "border-blue-200 bg-blue-50" : "border-slate-100 bg-slate-50"
+                }`}
+              >
+                {/* Day row header */}
+                <div className="flex items-center gap-3 px-3 pt-3 pb-2">
+                  {/* Toggle pill */}
+                  <button
+                    type="button"
+                    onClick={() => toggleDay(i)}
+                    className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${
+                      isOpen ? "bg-blue-600" : "bg-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                        isOpen ? "left-[22px]" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                  <span className={`font-bold text-sm w-24 ${isOpen ? "text-slate-900" : "text-slate-400"}`}>
+                    {FULL_DAYS[i]}
+                  </span>
                   {isOpen ? (
-                    <Check className="w-3 h-3 mt-0.5" />
+                    <span className="ml-auto text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Open
+                    </span>
                   ) : (
-                    <X className="w-3 h-3 mt-0.5 opacity-40" />
+                    <span className="ml-auto text-xs font-medium text-slate-400">Closed</span>
                   )}
-                </button>
-              );
-            })}
-          </div>
+                </div>
 
-          {/* Summary */}
-          <div className="bg-slate-50 rounded-xl px-3 py-2">
+                {/* Time pickers — only when open */}
+                {isOpen && (
+                  <div className="px-3 pb-3 flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
+                        Opens
+                      </label>
+                      <input
+                        type="time"
+                        value={dayHours.open}
+                        onChange={(e) => setHour(i, "open", e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
+                        Closes
+                      </label>
+                      <input
+                        type="time"
+                        value={dayHours.close}
+                        onChange={(e) => setHour(i, "close", e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      title="Copy these hours to all open days"
+                      onClick={() => copyToAll(i)}
+                      className="mt-4 flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Summary + Save */}
+        <div className="px-4 pb-5 pt-3 border-t border-slate-100 flex-shrink-0 space-y-3">
+          <div className="bg-slate-50 rounded-xl px-3 py-2 text-center">
             {openDays.size === 0 ? (
-              <p className="text-xs text-red-500 font-medium text-center">⚠ Shop marked closed all week</p>
+              <p className="text-xs text-red-500 font-medium">⚠ Shop marked closed all week</p>
             ) : (
-              <p className="text-xs text-slate-600 text-center">
-                Open: <span className="font-semibold text-slate-900">
-                  {Array.from(openDays).sort().map((d) => DAYS[d]).join(", ")}
+              <p className="text-xs text-slate-600">
+                Open{" "}
+                <span className="font-semibold text-slate-900">
+                  {Array.from(openDays)
+                    .sort()
+                    .map((d) => DAYS[d])
+                    .join(", ")}
                 </span>
               </p>
             )}
           </div>
-        </div>
-
-        <div className="px-5 pb-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
-          >
-            Skip for now
-          </button>
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={() => onSave(Array.from(openDays).sort())}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-60"
-          >
-            {isSaving ? "Saving…" : "Save Schedule"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={handleSave}
+              className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-60"
+            >
+              {isSaving ? "Saving…" : "Save Hours"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -340,14 +340,15 @@ export default function Dashboard() {
     },
   });
 
-  const handleSaveSchedule = async (days: number[]) => {
+  const handleSaveSchedule = async (days: number[], hoursMap: Record<string, { open: string; close: string }>) => {
     setWeeklyModalSaving(true);
     try {
       await fetch(`/api/shops/${slug}/schedule`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ openDays: days }),
+        body: JSON.stringify({ openDays: days, openHours: hoursMap }),
       });
+      refetchShopProfile();
     } catch {}
     setWeeklyModalSaving(false);
     setShowWeeklyModal(false);
@@ -479,9 +480,9 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowWeeklyModal(true)}
-                className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
               >
-                <Calendar className="w-3.5 h-3.5" /> Schedule
+                <Clock className="w-3.5 h-3.5" /> Edit Hours
               </button>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                 shop.isOpen && !shop.isPaused ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
@@ -973,6 +974,7 @@ export default function Dashboard() {
     {showWeeklyModal && (
       <WeeklyScheduleModal
         currentOpenDays={(shopProfile?.shop as any)?.openDays ?? [0, 1, 2, 3, 4, 5, 6]}
+        currentOpenHours={(shopProfile?.shop as any)?.openHours ?? {}}
         onSave={handleSaveSchedule}
         onClose={() => setShowWeeklyModal(false)}
         isSaving={weeklyModalSaving}

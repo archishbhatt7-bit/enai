@@ -291,19 +291,34 @@ router.patch("/shops/:slug/schedule", async (req, res) => {
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
 
-  const { openDays } = req.body as { openDays: number[] };
+  const { openDays, openHours } = req.body as {
+    openDays: number[];
+    openHours?: Record<string, { open: string; close: string }>;
+  };
   if (!Array.isArray(openDays)) {
     return res.status(400).json({ error: "openDays must be an array" });
   }
-  const valid = openDays.filter((d) => typeof d === "number" && d >= 0 && d <= 6);
+  const validDays = openDays.filter((d) => typeof d === "number" && d >= 0 && d <= 6);
+
+  const updatePayload: Record<string, any> = { openDays: validDays };
+  if (openHours && typeof openHours === "object") {
+    const validHours: Record<string, { open: string; close: string }> = {};
+    for (const [key, val] of Object.entries(openHours)) {
+      const dayNum = parseInt(key);
+      if (dayNum >= 0 && dayNum <= 6 && val?.open && val?.close) {
+        validHours[key] = { open: val.open, close: val.close };
+      }
+    }
+    updatePayload.openHours = validHours;
+  }
 
   const [updated] = await db
     .update(shopsTable)
-    .set({ openDays: valid })
+    .set(updatePayload)
     .where(eq(shopsTable.id, shop.id))
     .returning();
 
-  return res.json({ openDays: updated.openDays });
+  return res.json({ openDays: updated.openDays, openHours: updated.openHours });
 });
 
 export default router;

@@ -25,6 +25,7 @@ export const shopsTable = pgTable("shops", {
   latitude: text("latitude"),
   longitude: text("longitude"),
   openDays: json("open_days").$type<number[]>().default([0, 1, 2, 3, 4, 5, 6]),
+  openHours: json("open_hours").$type<Record<string, { open: string; close: string }>>().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
