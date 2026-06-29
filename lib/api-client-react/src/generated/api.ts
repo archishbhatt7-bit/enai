@@ -1836,7 +1836,11 @@ export const getGetAllCustomerBookingsQueryOptions = <
   const queryKey = queryOptions?.queryKey ?? getGetAllCustomerBookingsQueryKey(phone);
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllCustomerBookings>>> =
     () => getAllCustomerBookings(phone);
-  return { queryKey, queryFn, enabled: !!phone, ...queryOptions };
+  return { queryKey, queryFn, enabled: !!phone, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAllCustomerBookings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
 };
 
 export const useGetAllCustomerBookings = <
@@ -1929,7 +1933,11 @@ export const getGetCustomerBookingsQueryOptions = <
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getCustomerBookings>>
   > = () => getCustomerBookings(phone);
-  return { queryKey, queryFn, enabled: !!phone, ...queryOptions };
+  return { queryKey, queryFn, enabled: !!phone, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerBookings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
 };
 
 export const useGetCustomerBookings = <

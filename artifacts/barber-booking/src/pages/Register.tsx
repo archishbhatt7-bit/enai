@@ -18,8 +18,8 @@ const PRESET_SERVICES = [
 
 interface ServiceConfig {
   name: string;
-  price: number;
-  durationMinutes: number;
+  price: number | "";
+  durationMinutes: number | "";
 }
 
 type Step = "details" | "photos" | "services" | "done";
@@ -45,8 +45,8 @@ export default function Register() {
     shopName: "",
     phone: "",
     password: "",
-    numChairs: 2,
-    numBarbers: 2,
+    numChairs: 2 as number | "",
+    numBarbers: 2 as number | "",
     city: "",
     address: "",
     openTime: "09:00",
@@ -111,6 +111,8 @@ export default function Register() {
     registerMutation.mutate({
       data: {
         ...form,
+        numChairs: Number(form.numChairs) || 0,
+        numBarbers: Number(form.numBarbers) || 0,
         pincode: form.pincode || undefined,
         latitude: form.latitude || undefined,
         longitude: form.longitude || undefined,
@@ -152,7 +154,7 @@ export default function Register() {
     const allServices: ServiceConfig[] = [
       ...PRESET_SERVICES.filter((s) => selectedServices[s.name]).map((s) => serviceConfigs[s.name]),
       ...customServices,
-    ];
+    ].map(s => ({ ...s, price: Number(s.price) || 0, durationMinutes: Number(s.durationMinutes) || 0 }));
 
     for (const service of allServices) {
       await createServiceMutation.mutateAsync({ slug: shopSlug, data: service });
@@ -164,7 +166,7 @@ export default function Register() {
     setSelectedServices((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const updateServiceConfig = (name: string, field: "price" | "durationMinutes", value: number) => {
+  const updateServiceConfig = (name: string, field: "price" | "durationMinutes", value: number | "") => {
     setServiceConfigs((prev) => ({
       ...prev,
       [name]: { ...prev[name], [field]: value },
@@ -198,7 +200,7 @@ export default function Register() {
             <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
               <Scissors className="w-3.5 h-3.5 text-slate-900" />
             </div>
-            <span className="font-bold text-slate-900">SlotCut — Register Shop</span>
+            <span className="font-bold text-slate-900">eNai — Register Shop</span>
           </div>
         </div>
       </header>
@@ -321,7 +323,7 @@ export default function Register() {
                     min={1}
                     max={20}
                     value={form.numChairs}
-                    onChange={(e) => setForm((f) => ({ ...f, numChairs: Number(e.target.value) }))}
+                    onChange={(e) => setForm((f) => ({ ...f, numChairs: e.target.value === "" ? "" : Number(e.target.value) }))}
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
@@ -332,7 +334,7 @@ export default function Register() {
                     min={1}
                     max={20}
                     value={form.numBarbers}
-                    onChange={(e) => setForm((f) => ({ ...f, numBarbers: Number(e.target.value) }))}
+                    onChange={(e) => setForm((f) => ({ ...f, numBarbers: e.target.value === "" ? "" : Number(e.target.value) }))}
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
@@ -517,7 +519,7 @@ export default function Register() {
                             type="number"
                             min={1}
                             value={serviceConfigs[service.name].price}
-                            onChange={(e) => updateServiceConfig(service.name, "price", Number(e.target.value))}
+                            onChange={(e) => updateServiceConfig(service.name, "price", e.target.value === "" ? "" : Number(e.target.value))}
                             className="w-20 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                             onClick={(e) => e.stopPropagation()}
                           />
@@ -529,7 +531,7 @@ export default function Register() {
                             min={5}
                             step={5}
                             value={serviceConfigs[service.name].durationMinutes}
-                            onChange={(e) => updateServiceConfig(service.name, "durationMinutes", Number(e.target.value))}
+                            onChange={(e) => updateServiceConfig(service.name, "durationMinutes", e.target.value === "" ? "" : Number(e.target.value))}
                             className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                             onClick={(e) => e.stopPropagation()}
                           />
@@ -557,7 +559,7 @@ export default function Register() {
                       type="number"
                       min={1}
                       value={service.price}
-                      onChange={(e) => updateCustomService(i, "price", Number(e.target.value))}
+                      onChange={(e) => updateCustomService(i, "price", e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-20 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
@@ -568,7 +570,7 @@ export default function Register() {
                       min={5}
                       step={5}
                       value={service.durationMinutes}
-                      onChange={(e) => updateCustomService(i, "durationMinutes", Number(e.target.value))}
+                      onChange={(e) => updateCustomService(i, "durationMinutes", e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-16 px-2 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>

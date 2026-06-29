@@ -44,7 +44,7 @@ export default function Login() {
             <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
               <Scissors className="w-3.5 h-3.5 text-slate-900" />
             </div>
-            <span className="font-bold text-slate-900">SlotCut</span>
+            <span className="font-bold text-slate-900">eNai</span>
           </div>
         </div>
       </header>

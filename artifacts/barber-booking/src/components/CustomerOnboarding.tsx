@@ -6,6 +6,7 @@ export interface CustomerProfile {
   gender: string;
   age: string;
   source?: string;
+  profilePhoto?: string;
 }
 
 const GENDERS = ["Male", "Female", "Other"];
@@ -68,7 +69,7 @@ export default function CustomerOnboarding({ phone, onDone }: Props) {
           <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Scissors className="w-7 h-7 text-white" />
           </div>
-          <h2 className="text-2xl font-black text-white">Welcome to SlotCut</h2>
+          <h2 className="text-2xl font-black text-white">Welcome to eNai</h2>
           <p className="text-blue-200 text-sm mt-1">Quick setup — just a few details</p>
         </div>
 

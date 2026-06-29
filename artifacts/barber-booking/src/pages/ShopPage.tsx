@@ -17,14 +17,18 @@ import {
   Check,
   Phone,
   User,
+  Users,
   Image as ImageIcon,
   Navigation,
+  Calendar,
+  X
 } from "lucide-react";
 import { photoUrl } from "@/components/ImageUpload";
 
 declare global { interface Window { L: any; } }
 
 const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 type DayHours = { open: string; close: string; breakStart?: string; breakEnd?: string };
 
 function ShopHours({
@@ -40,11 +44,11 @@ function ShopHours({
 }) {
   const today = new Date().getDay();
   if (!openDays?.length && !openHours) {
-    return <p className="text-sm text-slate-700 font-medium">{fallbackOpen} – {fallbackClose}</p>;
+    return <p className="text-sm text-slate-700 font-bold">{fallbackOpen} – {fallbackClose}</p>;
   }
   const days = openDays ?? [0, 1, 2, 3, 4, 5, 6];
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {DAY_ABBR.map((abbr, i) => {
         const isOpen = days.includes(i);
         const h: DayHours | undefined = openHours?.[String(i)];
@@ -52,27 +56,27 @@ function ShopHours({
         return (
           <div
             key={abbr}
-            className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1 ${isToday ? "bg-blue-50" : ""}`}
+            className={`flex items-center gap-3 text-sm rounded-xl px-3 py-1.5 ${isToday ? "bg-blue-50 border border-blue-100" : ""}`}
           >
-            <span className={`w-8 font-semibold text-xs ${isToday ? "text-blue-700" : "text-slate-500"}`}>
+            <span className={`w-10 font-bold text-xs uppercase tracking-wider ${isToday ? "text-blue-700" : "text-slate-500"}`}>
               {abbr}
             </span>
             {isOpen ? (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className={`font-medium ${isToday ? "text-blue-900" : "text-slate-800"}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`font-bold ${isToday ? "text-blue-900" : "text-slate-800"}`}>
                   {h ? `${h.open} – ${h.close}` : `${fallbackOpen} – ${fallbackClose}`}
                 </span>
                 {h?.breakStart && (
-                  <span className="text-[11px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded font-medium">
+                  <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-lg uppercase tracking-wide">
                     break {h.breakStart}–{h.breakEnd}
                   </span>
                 )}
                 {isToday && (
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Today</span>
+                  <span className="text-[10px] font-black text-white bg-blue-600 px-2 py-0.5 rounded-lg uppercase tracking-wide">Today</span>
                 )}
               </div>
             ) : (
-              <span className="text-slate-400 text-xs">Closed</span>
+              <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Closed</span>
             )}
           </div>
         );
@@ -112,15 +116,15 @@ function ShopMap({ shopLat, shopLng, shopName }: { shopLat?: string | null; shop
         touchZoom: false,
       }).setView([sLat, sLng], 14);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18 }).addTo(map);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 18 }).addTo(map);
       mapInstanceRef.current = map;
 
       const shopIcon = L.divIcon({
-        html: '<div style="width:18px;height:18px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(37,99,235,0.6)"></div>',
-        iconSize: [18, 18], iconAnchor: [9, 9], className: "",
+        html: '<div style="width:24px;height:24px;background:#2563eb;border:4px solid white;border-radius:50%;box-shadow:0 4px 12px rgba(37,99,235,0.4)"></div>',
+        iconSize: [24, 24], iconAnchor: [12, 12], className: "",
       });
       L.marker([sLat, sLng], { icon: shopIcon })
-        .bindTooltip(shopName, { permanent: false, offset: [0, -12] })
+        .bindTooltip(shopName, { permanent: false, offset: [0, -16] })
         .addTo(map);
 
       navigator.geolocation.getCurrentPosition((pos) => {
@@ -132,7 +136,7 @@ function ShopMap({ shopLat, shopLng, shopName }: { shopLat?: string | null; shop
         const gpsIcon = L.divIcon({
           html: `<div style="position:relative;width:24px;height:24px">
             <div style="position:absolute;inset:0;background:rgba(37,99,235,0.2);border-radius:50%;animation:gpsPulse 1.8s ease-out infinite"></div>
-            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px;background:#2563eb;border:2.5px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>
           </div>`,
           iconSize: [24, 24], iconAnchor: [12, 12], className: "",
         });
@@ -141,7 +145,7 @@ function ShopMap({ shopLat, shopLng, shopName }: { shopLat?: string | null; shop
           .addTo(map);
 
         const bounds = L.latLngBounds([[sLat, sLng], [uLat, uLng]]);
-        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
       }, () => {});
     };
 
@@ -176,11 +180,13 @@ function ShopMap({ shopLat, shopLng, shopName }: { shopLat?: string | null; shop
   if (!shopLat || !shopLng) return null;
 
   return (
-    <div className="relative overflow-hidden" style={{ height: 160 }}>
+    <div className="relative overflow-hidden rounded-[2rem] shadow-sm border border-slate-200" style={{ height: 220 }}>
       <div ref={mapDivRef} style={{ height: "100%", width: "100%" }} className="bg-slate-100" />
       {distKm !== null && (
-        <div className="absolute bottom-2 left-2 z-[400] bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-700 shadow-md border border-blue-100 flex items-center gap-1.5">
-          <Navigation className="w-3 h-3 text-blue-500" />
+        <div className="absolute bottom-3 left-3 z-[400] bg-white/95 backdrop-blur-sm px-4 py-2 rounded-2xl text-xs font-black text-slate-900 shadow-lg border border-slate-200/50 flex items-center gap-2">
+          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+             <Navigation className="w-3 h-3 text-blue-600" />
+          </div>
           {distKm < 1
             ? `${Math.round(distKm * 1000)} m away`
             : distKm < 10
@@ -188,23 +194,16 @@ function ShopMap({ shopLat, shopLng, shopName }: { shopLat?: string | null; shop
             : `${Math.round(distKm)} km away`}
         </div>
       )}
-      <div className="absolute top-2 right-2 z-[400]">
-        <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium text-slate-500 shadow-sm border border-slate-100">
-          📍 Map
-        </div>
-      </div>
     </div>
   );
 }
-
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function formatDate(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
 function formatDisplayDate(d: Date) {
-  return `${DAYS[d.getDay()]}, ${d.getDate()} ${d.toLocaleString("en-IN", { month: "short" })}`;
+  return `${DAY_ABBR[d.getDay()]}, ${d.getDate()} ${d.toLocaleString("en-IN", { month: "short" })}`;
 }
 
 type BookingStep = "service" | "slot" | "payment" | "contact" | "otp" | "confirm";
@@ -214,19 +213,30 @@ export default function ShopPage() {
   const slug = params.slug;
   const [, navigate] = useLocation();
 
+  // Auto-fill from profile
+  const storedPhone = typeof window !== 'undefined' ? localStorage.getItem("customer_phone") || "" : "";
+  let initialName = "";
+  if (storedPhone && typeof window !== 'undefined') {
+    const profileRaw = localStorage.getItem(`slotcut_profile_${storedPhone}`);
+    if (profileRaw) {
+      try {
+        const p = JSON.parse(profileRaw);
+        initialName = p.name || "";
+      } catch (e) {}
+    }
+  }
+
   const [step, setStep] = useState<BookingStep>("service");
   const [selectedService, setSelectedService] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<"morning" | "afternoon" | "evening">("morning");
   const [paymentType, setPaymentType] = useState<"token" | "full">("token");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [bookingOtp, setBookingOtp] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState(initialName);
+  const [customerPhone, setCustomerPhone] = useState(storedPhone);
   const [error, setError] = useState("");
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [finalBooking, setFinalBooking] = useState<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   function playSuccessSound() {
@@ -258,7 +268,7 @@ export default function ShopPage() {
   }, [step]);
 
   const { data: profileData, isLoading: shopLoading } = useGetShop(slug);
-  const shop = profileData?.shop;
+  const shop = profileData?.shop as any; // Type override for extended frontend fields
   const services = profileData?.services ?? [];
 
   const selectedServiceObj = services.find((s) => s.id === selectedService);
@@ -270,40 +280,10 @@ export default function ShopPage() {
     { query: { enabled: !!selectedService && step === "slot" } }
   );
 
-  const sendOtpMutation = useSendOtp({
-    mutation: {
-      onSuccess: (data) => {
-        // In demo mode, show OTP to user
-        if (data.otp) setBookingOtp(data.otp);
-        setStep("otp");
-      },
-    },
-  });
-
-  const verifyOtpMutation = useVerifyOtp({
-    mutation: {
-      onSuccess: () => {
-        createBookingMutation.mutate({
-          slug,
-          data: {
-            customerName,
-            customerPhone,
-            serviceId: selectedService!,
-            slotDate: selectedDate,
-            slotTime: selectedTime!,
-            paymentType,
-          },
-        });
-      },
-      onError: () => {
-        setOtpError("Invalid OTP. Please try again.");
-      },
-    },
-  });
-
   const createBookingMutation = useCreateBooking({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        setFinalBooking(data);
         setStep("confirm");
       },
       onError: (err: any) => {
@@ -313,7 +293,7 @@ export default function ShopPage() {
     },
   });
 
-  const handleSendOtp = () => {
+  const handleCreateBooking = () => {
     if (!customerName.trim() || !customerPhone.trim()) {
       setError("Please fill in your name and phone number.");
       return;
@@ -323,15 +303,19 @@ export default function ShopPage() {
       return;
     }
     setError("");
-    sendOtpMutation.mutate({ data: { phone: customerPhone } });
+    createBookingMutation.mutate({
+      slug,
+      data: {
+        customerName,
+        customerPhone,
+        serviceId: selectedService!,
+        slotDate: selectedDate,
+        slotTime: selectedTime!,
+        paymentType,
+      },
+    });
   };
 
-  const handleVerifyOtp = () => {
-    setOtpError("");
-    verifyOtpMutation.mutate({ data: { phone: customerPhone, otp } });
-  };
-
-  // Generate next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
@@ -341,7 +325,7 @@ export default function ShopPage() {
   if (shopLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin shadow-lg" />
       </div>
     );
   }
@@ -349,10 +333,11 @@ export default function ShopPage() {
   if (!shop) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-slate-900">Shop not found</h1>
-          <button onClick={() => navigate("/customer")} className="mt-4 text-blue-700 font-medium text-sm">
-            Back to home
+        <div className="text-center bg-white p-10 rounded-[2rem] shadow-xl border border-slate-200">
+          <Scissors className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Shop not found</h1>
+          <button onClick={() => navigate("/customer")} className="mt-6 bg-blue-600 text-white font-black px-8 py-3 rounded-2xl shadow-lg shadow-blue-600/30">
+            Back to Home
           </button>
         </div>
       </div>
@@ -360,9 +345,14 @@ export default function ShopPage() {
   }
 
   const shopClosed = !shop.isOpen || shop.isPaused;
+  const allPhotos = [
+    shop.profilePhoto,
+    ...(shop.interiorPhotos || []),
+    ...(shop.portfolioPhotos || [])
+  ].filter(Boolean) as string[];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
       {showSuccessOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center success-overlay-bg">
           <div className="success-tick-circle">
@@ -373,23 +363,23 @@ export default function ShopPage() {
           </div>
         </div>
       )}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate("/customer")} className="text-slate-500 hover:text-slate-900">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center flex-shrink-0">
-              <Scissors className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="font-bold text-slate-900 text-sm truncate">{shop.shopName}</h1>
-              <p className="text-xs text-slate-400 flex items-center gap-1">
-                <MapPin className="w-2.5 h-2.5" />{shop.city}
-              </p>
+
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate("/customer")} className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-slate-700 font-bold text-sm">
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back</span>
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-inner">
+                <Scissors className="w-4 h-4 text-white" />
+              </div>
+              <h1 className="font-black text-lg text-slate-900 tracking-tight">{shop.shopName}</h1>
             </div>
           </div>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+          <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl ${
             shopClosed ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"
           }`}>
             {shopClosed ? (shop.isPaused ? "Paused" : "Closed") : "Open"}
@@ -397,525 +387,442 @@ export default function ShopPage() {
         </div>
       </header>
 
-      {/* Profile photo banner */}
-      {(shop as any).profilePhoto && (
-        <div className="w-full max-w-lg mx-auto overflow-hidden" style={{ height: 180 }}>
-          <img
-            src={photoUrl((shop as any).profilePhoto)}
-            alt={shop.shopName}
-            className="w-full h-full object-cover"
-          />
+      {/* Photo Gallery Carousel */}
+      {allPhotos.length > 0 ? (
+        <div className="w-full bg-slate-900 overflow-hidden relative shadow-inner">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-slate-900/60 to-transparent pointer-events-none z-10" />
+          <div className="flex overflow-x-auto gap-1 snap-x snap-mandatory hide-scrollbar relative z-0">
+            {allPhotos.map((photo, idx) => (
+              <div key={idx} className="snap-center shrink-0 w-[85vw] sm:w-[400px] lg:w-[500px] h-[30vh] sm:h-[400px] relative">
+                <img src={photoUrl(photo)} alt="Shop" className="w-full h-full object-cover" />
+              </div>
+            ))}
+          </div>
+          <div className="absolute bottom-4 right-4 z-20 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+             <p className="text-white text-xs font-bold tracking-widest uppercase flex items-center gap-1.5">
+               <ImageIcon className="w-3.5 h-3.5" /> {allPhotos.length} Photos
+             </p>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full bg-slate-900 h-48 flex items-center justify-center">
+           <Scissors className="w-12 h-12 text-slate-700 opacity-50" />
         </div>
       )}
 
-      {/* Live map with GPS distance */}
-      <div className="max-w-lg mx-auto">
-        <ShopMap
-          shopLat={(shop as any).latitude}
-          shopLng={(shop as any).longitude}
-          shopName={shop.shopName}
-        />
-      </div>
+      {/* Main Content Grid */}
+      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        {/* Left Column: Details & Services */}
+        <div className="lg:col-span-7 space-y-12">
+          
+          {/* Shop Header Details */}
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 leading-tight mb-3 tracking-tight">{shop.shopName}</h1>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 text-slate-500 font-medium">
+              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg text-sm"><MapPin className="w-4 h-4 text-blue-600" /> {shop.fullAddress || shop.city}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg text-sm"><Phone className="w-4 h-4 text-blue-600" /> +91 {shop.phone || "Not provided"}</span>
+              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg text-sm"><Users className="w-4 h-4 text-blue-600" /> {shop.numBarbers} Barbers</span>
+            </div>
+          </div>
 
-      <div className="max-w-lg mx-auto px-4 py-6">
-        {/* Booking steps indicator */}
-        {step !== "confirm" && (
-          <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1">
-            {(["service", "slot", "payment", "contact"] as BookingStep[]).map((s, i) => {
-              const labels = ["Service", "Time Slot", "Payment", "Contact"];
-              const stepOrder = ["service", "slot", "payment", "contact", "otp", "confirm"];
-              const currentIdx = stepOrder.indexOf(step);
-              const thisIdx = stepOrder.indexOf(s);
-              const done = currentIdx > thisIdx;
-              const active = step === s;
-              return (
-                <div key={s} className="flex items-center gap-1.5 flex-shrink-0">
-                  <div className={`flex items-center gap-1.5 ${active ? "opacity-100" : done ? "opacity-80" : "opacity-40"}`}>
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                      done ? "bg-green-500 text-white" : active ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
-                    }`}>
-                      {done ? <Check className="w-3 h-3" /> : i + 1}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Map */}
+            <div>
+               <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Location</h3>
+               <ShopMap shopLat={shop.latitude} shopLng={shop.longitude} shopName={shop.shopName} />
+            </div>
+
+            {/* Hours */}
+            <div>
+               <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Opening Hours</h3>
+               <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+                 <ShopHours openDays={shop.openDays} openHours={shop.openHours} fallbackOpen={shop.openTime} fallbackClose={shop.closeTime} />
+               </div>
+            </div>
+          </div>
+
+          {/* Services List */}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Services</h2>
+              <span className="text-sm font-bold text-slate-400 bg-slate-200/50 px-3 py-1 rounded-xl">{services.filter(s => s.isActive).length} Available</span>
+            </div>
+            
+            {shopClosed && (
+              <div className="mb-6 p-5 bg-red-50 border-2 border-red-100 rounded-3xl flex items-start gap-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-red-700 font-black text-lg">Shop is currently {shop.isPaused ? "paused" : "closed"}</p>
+                  <p className="text-red-600 font-medium text-sm mt-1">Online bookings are not available right now. Check the opening hours above.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {services.filter((s) => s.isActive).map((service) => (
+                <button
+                  key={service.id}
+                  disabled={shopClosed}
+                  onClick={() => {
+                    setSelectedService(service.id);
+                    setStep("slot");
+                    window.scrollTo({ top: 400, behavior: "smooth" }); // Scroll to view side panel on mobile
+                  }}
+                  className={`text-left border-2 rounded-3xl p-5 transition-all group disabled:opacity-50 disabled:cursor-not-allowed ${
+                    selectedService === service.id 
+                      ? "border-blue-600 bg-blue-50 shadow-md shadow-blue-900/10" 
+                      : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <p className={`font-black text-lg leading-tight ${selectedService === service.id ? "text-blue-900" : "text-slate-900"}`}>
+                      {service.name}
+                    </p>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${selectedService === service.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600"}`}>
+                      {selectedService === service.id ? <Check className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </div>
-                    <span className={`text-xs font-medium ${active ? "text-slate-900" : "text-slate-400"}`}>
-                      {labels[i]}
+                  </div>
+                  <div className="flex items-center gap-4 mt-auto">
+                    <span className="text-xl font-black text-slate-900 tracking-tight">₹{service.price}</span>
+                    <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg">
+                      <Clock className="w-3.5 h-3.5" /> {service.durationMinutes} min
                     </span>
                   </div>
-                  {i < 3 && <div className="w-4 h-px bg-slate-200 flex-shrink-0" />}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {shopClosed && step === "service" && (
-          <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-red-700 font-semibold text-sm">Shop is currently {shop.isPaused ? "paused" : "closed"}</p>
-              <p className="text-red-500 text-xs mt-0.5">Online bookings are not available right now.</p>
+                </button>
+              ))}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* STEP 1: Select Service */}
-        {step === "service" && (
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Choose a service</h2>
-            {services.filter((s) => s.isActive).length === 0 ? (
-              <p className="text-slate-400 text-sm">No services available.</p>
+        {/* Right Column: Sticky Booking Panel */}
+        <div className="lg:col-span-5 relative">
+          <div className="sticky top-24">
+            
+            {step === "service" ? (
+              <div className="bg-white border-2 border-slate-200 border-dashed rounded-[2.5rem] p-10 text-center shadow-sm">
+                 <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <Calendar className="w-8 h-8 text-blue-500" />
+                 </div>
+                 <h3 className="text-2xl font-black text-slate-900 mb-2 tracking-tight">Book an Appointment</h3>
+                 <p className="text-slate-500 font-medium text-base">Select a service from the list to see available time slots and complete your booking.</p>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {services.filter((s) => s.isActive).map((service) => (
-                  <button
-                    key={service.id}
-                    disabled={shopClosed}
-                    onClick={() => {
-                      setSelectedService(service.id);
-                      setStep("slot");
-                    }}
-                    className="w-full text-left border border-slate-200 rounded-xl p-4 bg-white hover:border-blue-400 hover:bg-blue-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-slate-900">{service.name}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-sm text-blue-700 font-bold">₹{service.price}</span>
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> ~{service.durationMinutes} min
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-colors" />
+              <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl overflow-hidden flex flex-col">
+                
+                {/* Booking Steps Header */}
+                {step !== "confirm" && (
+                  <div className="bg-slate-900 p-6 pb-8 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-3xl opacity-20 -mr-10 -mt-10 pointer-events-none" />
+                    
+                    <div className="flex items-center justify-between mb-2">
+                       <h2 className="text-xl font-black tracking-tight relative z-10">
+                         {step === "slot" ? "Pick a Time" : step === "payment" ? "Payment Option" : step === "contact" ? "Your Details" : "Verification"}
+                       </h2>
+                       <button onClick={() => setStep("service")} className="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full relative z-10">
+                         <X className="w-4 h-4" />
+                       </button>
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
 
-            <div className="mt-6 p-4 bg-slate-100 rounded-xl">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Shop Hours</p>
-              <ShopHours
-                openDays={(shop as any).openDays}
-                openHours={(shop as any).openHours}
-                fallbackOpen={shop.openTime}
-                fallbackClose={shop.closeTime}
-              />
-              <p className="text-xs text-slate-400 mt-3">{shop.numChairs} chair{shop.numChairs !== 1 ? "s" : ""} • {shop.numBarbers} barber{shop.numBarbers !== 1 ? "s" : ""}</p>
-            </div>
-
-            {/* Interior photos gallery */}
-            {((shop as any).interiorPhotos as string[] | null)?.length ? (
-              <div className="mt-6">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Inside the Salon</p>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {((shop as any).interiorPhotos as string[]).map((p, i) => (
-                    <img
-                      key={i}
-                      src={photoUrl(p)}
-                      alt={`interior-${i}`}
-                      className="w-32 h-24 object-cover rounded-lg flex-shrink-0 border border-slate-200"
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Portfolio / work showcase */}
-            {((shop as any).portfolioPhotos as string[] | null)?.length ? (
-              <div className="mt-6">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                  <ImageIcon className="w-3.5 h-3.5 inline mr-1" />Our Work
-                </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {((shop as any).portfolioPhotos as string[]).map((p, i) => (
-                    <img
-                      key={i}
-                      src={photoUrl(p)}
-                      alt={`portfolio-${i}`}
-                      className="aspect-square object-cover rounded-lg border border-slate-200 w-full"
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {/* STEP 2: Select Slot */}
-        {step === "slot" && selectedServiceObj && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => setStep("service")} className="text-slate-400 hover:text-slate-700">
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Pick a time</h2>
-                <p className="text-xs text-slate-400">{selectedServiceObj.name} — ₹{selectedServiceObj.price}</p>
-              </div>
-            </div>
-
-            {/* Date Picker */}
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
-              {dates.map((d) => {
-                const str = formatDate(d);
-                const active = str === selectedDate;
-                return (
-                  <button
-                    key={str}
-                    onClick={() => { setSelectedDate(str); setSelectedTime(null); setTimePeriod("morning"); }}
-                    className={`flex-shrink-0 text-center px-3 py-2.5 rounded-lg border transition-all ${
-                      active
-                        ? "bg-blue-600 border-blue-600 text-slate-900"
-                        : "bg-white border-slate-200 text-slate-700 hover:border-blue-300"
-                    }`}
-                  >
-                    <p className="text-xs font-semibold">{DAYS[d.getDay()]}</p>
-                    <p className="text-sm font-bold mt-0.5">{d.getDate()}</p>
-                  </button>
-                );
-              })}
-            </div>
-
-            {slotsLoading && (
-              <div className="space-y-3">
-                <div className="h-12 bg-slate-100 rounded-xl animate-pulse" />
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-14 bg-slate-100 rounded-xl animate-pulse" />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {!slotsLoading && slotsData && (() => {
-              const allSlots = slotsData.slots;
-
-              const inPeriod = (time: string, period: typeof timePeriod) => {
-                const h = parseInt(time.split(":")[0], 10);
-                if (period === "morning")   return h >= 0  && h < 12;
-                if (period === "afternoon") return h >= 12 && h < 17;
-                return h >= 17;
-              };
-
-              const countAvail = (period: typeof timePeriod) =>
-                allSlots.filter((s) => s.available && inPeriod(s.time, period)).length;
-
-              const morningCount   = countAvail("morning");
-              const afternoonCount = countAvail("afternoon");
-              const eveningCount   = countAvail("evening");
-
-              const periods = [
-                { key: "morning"   as const, label: "Morning",   emoji: "🌅", range: "before 12 PM", count: morningCount   },
-                { key: "afternoon" as const, label: "Afternoon",  emoji: "☀️", range: "12 – 5 PM",   count: afternoonCount },
-                { key: "evening"   as const, label: "Evening",    emoji: "🌆", range: "after 5 PM",   count: eveningCount   },
-              ];
-
-              const visibleSlots = allSlots.filter((s) => inPeriod(s.time, timePeriod));
-
-              return (
-                <>
-                  {/* Period tabs */}
-                  <div className="grid grid-cols-3 gap-2 mb-5">
-                    {periods.map(({ key, label, emoji, range, count }) => {
-                      const active = timePeriod === key;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => { setTimePeriod(key); setSelectedTime(null); }}
-                          className={`flex flex-col items-center py-3 px-2 rounded-xl border-2 transition-all ${
-                            active
-                              ? "border-blue-600 bg-blue-50"
-                              : "border-slate-200 bg-white hover:border-blue-300"
-                          }`}
-                        >
-                          <span className="text-xl mb-1 leading-none">{emoji}</span>
-                          <span className={`text-xs font-bold ${active ? "text-blue-800" : "text-slate-700"}`}>{label}</span>
-                          <span className="text-xs text-slate-400 mt-0.5">{range}</span>
-                          <span className={`mt-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            count > 0
-                              ? active ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
-                              : "bg-slate-50 text-slate-300"
-                          }`}>
-                            {count} slot{count !== 1 ? "s" : ""}
-                          </span>
-                        </button>
-                      );
-                    })}
+                    {/* Progress Bar Indicators */}
+                    <div className="flex items-center gap-1.5 mt-6 relative z-10">
+                      {(["slot", "payment", "contact", "confirm"] as BookingStep[]).map((s, i) => {
+                        const stepOrder = ["slot", "payment", "contact", "confirm"];
+                        const currentIdx = stepOrder.indexOf(step);
+                        const thisIdx = stepOrder.indexOf(s);
+                        const done = currentIdx > thisIdx;
+                        const active = step === s;
+                        return (
+                          <div key={s} className="flex-1">
+                            <div className={`h-1.5 rounded-full transition-colors ${done || active ? "bg-blue-500" : "bg-slate-700"}`} />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
 
-                  {/* Slot grid */}
-                  {visibleSlots.filter((s) => s.available).length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-slate-500 text-sm font-medium">No {timePeriod} slots available</p>
-                      <p className="text-slate-400 text-xs mt-1">Try a different time of day or date</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {visibleSlots.map((slot) => (
-                        <button
-                          key={slot.time}
-                          disabled={!slot.available}
-                          onClick={() => { setSelectedTime(slot.time); setStep("payment"); }}
-                          className={`py-3 px-2 rounded-xl text-sm font-semibold border-2 transition-all ${
-                            !slot.available
-                              ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
-                              : selectedTime === slot.time
-                              ? "bg-blue-600 border-blue-600 text-slate-900"
-                              : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50"
-                          }`}
-                        >
-                          {slot.time}
-                          {slot.available && (
-                            <div className="text-xs font-normal opacity-60 mt-0.5">
-                              {slot.availableChairs} left
-                            </div>
-                          )}
-                        </button>
-                      ))}
+                {/* Booking Content Container */}
+                <div className="p-6 sm:p-8 bg-white flex-1">
+                  
+                  {/* Selected Service Summary Header */}
+                  {step !== "confirm" && selectedServiceObj && (
+                    <div className="flex justify-between items-center bg-blue-50/50 border border-blue-100 rounded-2xl p-4 mb-8">
+                       <div>
+                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Selected Service</p>
+                         <p className="font-bold text-slate-900 text-sm truncate">{selectedServiceObj.name}</p>
+                       </div>
+                       <div className="text-right">
+                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Price</p>
+                         <p className="font-black text-slate-900 text-sm">₹{selectedServiceObj.price}</p>
+                       </div>
                     </div>
                   )}
-                </>
-              );
-            })()}
-          </div>
-        )}
 
-        {/* STEP 3: Payment */}
-        {step === "payment" && selectedServiceObj && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => setStep("slot")} className="text-slate-400 hover:text-slate-700">
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <h2 className="text-lg font-bold text-slate-900">Choose payment</h2>
-            </div>
+                  {/* STEP: SLOT */}
+                  {step === "slot" && selectedServiceObj && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                      
+                      {/* Dates Scroll */}
+                      <div className="flex gap-2.5 overflow-x-auto pb-4 mb-6 hide-scrollbar">
+                        {dates.map((d) => {
+                          const str = formatDate(d);
+                          const active = str === selectedDate;
+                          return (
+                            <button
+                              key={str}
+                              onClick={() => { setSelectedDate(str); setSelectedTime(null); setTimePeriod("morning"); }}
+                              className={`flex-shrink-0 flex flex-col items-center justify-center w-[72px] h-[80px] rounded-2xl border-2 transition-all ${
+                                active
+                                  ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20"
+                                  : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
+                              }`}
+                            >
+                              <span className="text-[10px] font-black uppercase tracking-widest">{DAY_ABBR[d.getDay()]}</span>
+                              <span className={`text-2xl font-black mt-1 ${active ? "text-white" : "text-slate-900"}`}>{d.getDate()}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
 
-            <div className="bg-slate-100 rounded-lg p-4 mb-5 text-sm">
-              <div className="flex justify-between text-slate-600">
-                <span>{selectedServiceObj.name}</span>
-                <span>₹{selectedServiceObj.price}</span>
-              </div>
-              <div className="flex justify-between text-slate-400 text-xs mt-1">
-                <span>Date & time</span>
-                <span>{formatDisplayDate(new Date(selectedDate + "T12:00:00"))} at {selectedTime}</span>
-              </div>
-            </div>
+                      {slotsLoading && (
+                        <div className="space-y-4">
+                          <div className="h-16 bg-slate-100 rounded-2xl animate-pulse" />
+                          <div className="grid grid-cols-3 gap-3">
+                            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 bg-slate-100 rounded-xl animate-pulse" />)}
+                          </div>
+                        </div>
+                      )}
 
-            <div className="space-y-3 mb-6">
-              <button
-                onClick={() => setPaymentType("token")}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  paymentType === "token" ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-bold text-slate-900">Token Booking</p>
-                    <p className="text-2xl font-black text-blue-700 mt-1">₹1</p>
-                    <p className="text-xs text-slate-500 mt-1">Pay ₹{selectedServiceObj.price} directly to barber after service</p>
-                    <p className="text-xs text-blue-700 font-medium mt-0.5">₹1 platform fee charged now</p>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${
-                    paymentType === "token" ? "border-blue-600 bg-blue-600" : "border-slate-300"
-                  }`}>
-                    {paymentType === "token" && <div className="w-2 h-2 rounded-full bg-white" />}
-                  </div>
+                      {!slotsLoading && slotsData && (() => {
+                        const allSlots = slotsData.slots;
+                        const inPeriod = (time: string, period: typeof timePeriod) => {
+                          const h = parseInt(time.split(":")[0], 10);
+                          if (period === "morning")   return h >= 0  && h < 12;
+                          if (period === "afternoon") return h >= 12 && h < 17;
+                          return h >= 17;
+                        };
+                        const countAvail = (period: typeof timePeriod) => allSlots.filter((s) => s.available && inPeriod(s.time, period)).length;
+                        
+                        const periods = [
+                          { key: "morning" as const, label: "Morning", emoji: "🌅", count: countAvail("morning") },
+                          { key: "afternoon" as const, label: "Afternoon", emoji: "☀️", count: countAvail("afternoon") },
+                          { key: "evening" as const, label: "Evening", emoji: "🌆", count: countAvail("evening") },
+                        ];
+                        const visibleSlots = allSlots.filter((s) => inPeriod(s.time, timePeriod));
+
+                        return (
+                          <>
+                            {/* Time Periods */}
+                            <div className="grid grid-cols-3 gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl">
+                              {periods.map(({ key, label, count }) => {
+                                const active = timePeriod === key;
+                                return (
+                                  <button
+                                    key={key}
+                                    onClick={() => { setTimePeriod(key); setSelectedTime(null); }}
+                                    className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                                      active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                                    }`}
+                                  >
+                                    {label}
+                                    <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-md ${active ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-400"}`}>{count}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Time Slots Grid */}
+                            {visibleSlots.filter((s) => s.available).length === 0 ? (
+                              <div className="text-center py-10 bg-slate-50 rounded-3xl border border-slate-200 border-dashed">
+                                <Clock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                <p className="text-slate-500 font-bold">No slots available</p>
+                                <p className="text-slate-400 text-xs mt-1">Try a different time or date.</p>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {visibleSlots.map((slot) => (
+                                  <button
+                                    key={slot.time} disabled={!slot.available}
+                                    onClick={() => setSelectedTime(slot.time)}
+                                    className={`py-3 px-2 rounded-xl text-sm font-black border-2 transition-all ${
+                                      !slot.available ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed" : selectedTime === slot.time ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-900/20" : "bg-white border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-blue-50"
+                                    }`}
+                                  >
+                                    {slot.time}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="mt-8">
+                              <button
+                                disabled={!selectedTime}
+                                onClick={() => setStep("payment")}
+                                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-900/20"
+                              >
+                                Continue to Payment
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* STEP: PAYMENT */}
+                  {step === "payment" && selectedServiceObj && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                      
+                      <div className="bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
+                            <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDisplayDate(new Date(selectedDate + "T12:00:00"))} at {selectedTime}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 mb-8">
+                        <button
+                          onClick={() => setPaymentType("token")}
+                          className={`w-full text-left p-5 rounded-2xl border-2 transition-all ${paymentType === "token" ? "border-blue-600 bg-blue-50 shadow-md shadow-blue-900/10" : "border-slate-200 bg-white"}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-black text-slate-900 text-base">Token Booking</p>
+                              <p className="text-3xl font-black text-blue-600 mt-2 tracking-tight">₹1</p>
+                              <p className="text-xs text-slate-500 font-medium mt-3">Pay ₹{selectedServiceObj.price} directly to barber after service.</p>
+                              <p className="text-[10px] uppercase tracking-widest text-blue-700 font-bold mt-2">₹1 platform fee charged now</p>
+                            </div>
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors ${paymentType === "token" ? "border-blue-600 bg-blue-600" : "border-slate-300"}`}>
+                              {paymentType === "token" && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setPaymentType("full")}
+                          className={`w-full text-left p-5 rounded-2xl border-2 transition-all ${paymentType === "full" ? "border-blue-600 bg-blue-50 shadow-md shadow-blue-900/10" : "border-slate-200 bg-white"}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-black text-slate-900 text-base">Full Payment</p>
+                              <p className="text-3xl font-black text-slate-900 mt-2 tracking-tight">₹{selectedServiceObj.price}</p>
+                              <p className="text-xs text-slate-500 font-medium mt-3">Pay full amount securely online right now.</p>
+                              <p className="text-[10px] uppercase tracking-widest text-green-600 font-bold mt-2">₹0 platform fee</p>
+                            </div>
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors ${paymentType === "full" ? "border-blue-600 bg-blue-600" : "border-slate-300"}`}>
+                              {paymentType === "full" && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+
+                      <div className="flex gap-3 mt-8">
+                        <button onClick={() => setStep("slot")} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-colors">Back</button>
+                        <button onClick={() => setStep("contact")} className="w-2/3 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-colors shadow-xl shadow-slate-900/20">Next Step</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP: CONTACT */}
+                  {step === "contact" && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                      {error && <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm font-bold">{error}</div>}
+
+                      <div className="space-y-6 mb-8">
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">Full Name</label>
+                          <div className="relative">
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                              type="text" placeholder="e.g. Arjun Kumar"
+                              value={customerName} onChange={(e) => setCustomerName(e.target.value)}
+                              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">WhatsApp Number</label>
+                          <div className="relative">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
+                              value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all tracking-wide"
+                            />
+                          </div>
+                          <p className="text-[11px] font-medium text-slate-400 mt-2 flex items-start gap-1">
+                             <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> 
+                             We'll secure this booking under these details.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button onClick={() => setStep("payment")} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-colors">Back</button>
+                        <button onClick={handleCreateBooking} disabled={createBookingMutation.isPending} className="w-2/3 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-colors shadow-xl shadow-slate-900/20 disabled:opacity-60">
+                          {createBookingMutation.isPending ? "Booking..." : "Confirm Booking"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP: CONFIRM */}
+                  {step === "confirm" && finalBooking && (
+                    <div className="text-center py-6 animate-in zoom-in duration-500">
+                      <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                        <Check className="w-12 h-12 text-green-600" />
+                      </div>
+                      <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Confirmed!</h2>
+                      <p className="text-slate-500 text-sm font-medium mb-6">
+                        Your slot at <strong className="text-slate-900">{selectedTime}</strong> on <strong className="text-slate-900">{formatDisplayDate(new Date(selectedDate + "T12:00:00"))}</strong> is booked.
+                      </p>
+
+                      <div className="bg-slate-900 text-white rounded-3xl p-6 mb-8 text-center shadow-lg relative overflow-hidden">
+                         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-600/20 to-transparent pointer-events-none" />
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 relative z-10">Arrival OTP</p>
+                         <p className="text-5xl font-black tracking-[0.2em] relative z-10">{finalBooking.arrivalOtp}</p>
+                         <p className="text-xs font-bold text-slate-400 mt-4 relative z-10">Show this code to the barber when you arrive.</p>
+                      </div>
+
+                      <div className="bg-slate-50 border-2 border-slate-100 rounded-3xl p-6 mb-8 text-left shadow-sm">
+                        <div className="space-y-4 text-sm font-medium">
+                          <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+                            <span className="text-slate-500">Service</span>
+                            <span className="font-black text-slate-900">{selectedServiceObj?.name}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+                            <span className="text-slate-500">Payment</span>
+                            <span className="font-black text-green-600">₹{paymentType === "token" ? 1 : selectedServiceObj?.price} paid</span>
+                          </div>
+                        </div>
+                        <div className="mt-5 p-4 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3">
+                           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                           <p className="text-xs font-bold text-red-800 leading-relaxed">
+                             <strong className="text-red-900 uppercase tracking-wider text-[10px] block mb-1">Warning</strong>
+                             Arrive 5-10 minutes early! If you are more than 10 minutes late, your slot will be automatically cancelled.
+                           </p>
+                        </div>
+                      </div>
+
+                      <button onClick={() => navigate("/customer")} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-blue-500 transition-colors shadow-xl shadow-blue-600/20">
+                        Back to Dashboard
+                      </button>
+                    </div>
+                  )}
+
                 </div>
-              </button>
-
-              <button
-                onClick={() => setPaymentType("full")}
-                className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                  paymentType === "full" ? "border-blue-600 bg-blue-50" : "border-slate-200 bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-bold text-slate-900">Full Payment</p>
-                    <p className="text-2xl font-black text-slate-900 mt-1">₹{selectedServiceObj.price}</p>
-                    <p className="text-xs text-slate-500 mt-1">Pay full amount now</p>
-                    <p className="text-xs text-green-600 font-medium mt-0.5">₹0 platform fee</p>
-                  </div>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${
-                    paymentType === "full" ? "border-blue-600 bg-blue-600" : "border-slate-300"
-                  }`}>
-                    {paymentType === "full" && <div className="w-2 h-2 rounded-full bg-white" />}
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Buffer warning */}
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-5 flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-blue-700 leading-relaxed">
-                <strong>Arrive 5–10 minutes early.</strong> Your slot at {selectedTime} includes a 10-minute cleanup buffer. If you're more than 10 minutes late, your slot may be cancelled.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setStep("contact")}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors"
-            >
-              Continue — Pay ₹{paymentType === "token" ? 1 : selectedServiceObj.price}
-            </button>
-          </div>
-        )}
-
-        {/* STEP 4: Contact */}
-        {step === "contact" && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <button onClick={() => setStep("payment")} className="text-slate-400 hover:text-slate-700">
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <h2 className="text-lg font-bold text-slate-900">Your details</h2>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {error}
               </div>
             )}
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Your Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Full name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">WhatsApp Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    placeholder="10-digit mobile number"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-1">Your arrival OTP will be sent to this number</p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleSendOtp}
-              disabled={sendOtpMutation.isPending}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
-            >
-              {sendOtpMutation.isPending ? "Sending OTP..." : "Send OTP & Confirm Booking"}
-            </button>
+            
           </div>
-        )}
+        </div>
 
-        {/* STEP 5: OTP Verification */}
-        {step === "otp" && (
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-2">Verify your number</h2>
-            <p className="text-slate-500 text-sm mb-6">
-              Enter the 4-digit OTP sent to <strong>{customerPhone}</strong>
-            </p>
-
-            {bookingOtp && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                <p className="text-blue-800 font-semibold">Demo Mode — Your OTP: <span className="text-2xl font-black">{bookingOtp}</span></p>
-              </div>
-            )}
-
-            {otpError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {otpError}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">4-Digit OTP</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={4}
-                placeholder="0000"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                className="w-full px-4 py-4 text-3xl font-black text-center border-2 border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 tracking-widest"
-              />
-            </div>
-
-            <button
-              onClick={handleVerifyOtp}
-              disabled={otp.length !== 4 || verifyOtpMutation.isPending || createBookingMutation.isPending}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
-            >
-              {verifyOtpMutation.isPending || createBookingMutation.isPending ? "Verifying..." : "Verify & Book"}
-            </button>
-
-            <button
-              onClick={() => { sendOtpMutation.mutate({ data: { phone: customerPhone } }); }}
-              className="w-full mt-3 text-slate-500 text-sm hover:text-slate-700"
-            >
-              Resend OTP
-            </button>
-          </div>
-        )}
-
-        {/* STEP 6: Booking Confirmed */}
-        {step === "confirm" && (
-          <div className="text-center py-8">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-10 h-10 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Confirmed!</h2>
-            <p className="text-slate-500 text-sm mb-6">
-              Your slot at <strong>{selectedTime}</strong> on <strong>{formatDisplayDate(new Date(selectedDate + "T12:00:00"))}</strong> is booked.
-            </p>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6 text-left">
-              <p className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-3">Booking Summary</p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Service</span>
-                  <span className="font-semibold text-slate-900">{selectedServiceObj?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Time</span>
-                  <span className="font-semibold text-slate-900">{selectedTime} on {formatDisplayDate(new Date(selectedDate + "T12:00:00"))}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Payment</span>
-                  <span className="font-semibold text-slate-900">₹{paymentType === "token" ? 1 : selectedServiceObj?.price} paid</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-left mb-6">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Important</p>
-              <p className="text-sm text-blue-700 leading-relaxed">
-                You'll receive an <strong>arrival OTP on WhatsApp</strong>. Show it to the barber when you sit on the chair to start your service.
-                <br /><br />
-                <strong>Arrive 5–10 minutes early</strong> to your slot time. If you're more than 10 minutes late, your slot may be cancelled.
-              </p>
-            </div>
-
-            <button
-              onClick={() => navigate("/")}
-              className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-blue-500 transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

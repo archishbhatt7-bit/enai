@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useGetAllCustomerBookings, useCancelCustomerBooking } from "@workspace/api-client-react";
 import { useCustomerAuth } from "@/lib/customerAuth";
 import { ArrowLeft, Scissors, Calendar, Clock, MapPin, X, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import CustomerNavbar from "@/components/CustomerNavbar";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function formatDate(dateStr: string) {
@@ -61,16 +62,9 @@ export default function CustomerBookings() {
   const cancellingId = cancelMutation.isPending ? confirmCancel : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-slate-900 px-5 pt-10 pb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={() => navigate("/customer")}
-            className="text-slate-400 hover:text-white flex items-center gap-1.5 text-sm transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
-        </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <CustomerNavbar />
+      <div className="bg-slate-900 px-5 pt-6 pb-6">
         <h1 className="text-2xl font-black text-white">My Bookings</h1>
         <p className="text-slate-400 text-sm mt-0.5">All your appointments</p>
       </div>

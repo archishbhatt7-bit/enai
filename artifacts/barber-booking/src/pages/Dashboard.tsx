@@ -36,6 +36,14 @@ import {
   Camera,
   Trash2,
   Calendar,
+  LayoutDashboard,
+  Store,
+  Settings,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Save,
 } from "lucide-react";
 import ImageUpload, { photoUrl } from "@/components/ImageUpload";
 import WeeklyScheduleModal from "@/components/WeeklyScheduleModal";
@@ -221,20 +229,25 @@ export default function Dashboard() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const [, navigate] = useLocation();
-  const { shop, isAuthenticated, logout } = useAuth();
+  const { shop, token, isAuthenticated, logout } = useAuth();
   const queryClient = useQueryClient();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
   const [otpInputs, setOtpInputs] = useState<Record<number, string>>({});
   const [otpErrors, setOtpErrors] = useState<Record<number, string>>({});
   const prevBookingCount = useRef<number>(0);
-  const [activeTab, setActiveTab] = useState<"timeline" | "bookings" | "photos">("timeline");
+  const [activeSection, setActiveSection] = useState<"dashboard" | "services" | "profile" | "personal" | "settings">("dashboard");
+  const [dashboardSubTab, setDashboardSubTab] = useState<"timeline" | "bookings">("timeline");
   const [portfolioUploading, setPortfolioUploading] = useState(false);
   const [portfolioError, setPortfolioError] = useState("");
   const [interiorPaths, setInteriorPaths] = useState<string[] | null>(null);
   const [profilePath, setProfilePath] = useState<string | null | undefined>(undefined);
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyModalSaving, setWeeklyModalSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    ownerName: "", shopName: "", phone: "", city: "", address: "", pincode: ""
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Redirect if not authenticated or wrong shop
   useEffect(() => {
@@ -286,6 +299,39 @@ export default function Dashboard() {
   const { data: revenue } = useGetRevenueStats(slug);
 
   const { data: shopProfile, refetch: refetchShopProfile } = useGetShop(slug);
+
+  useEffect(() => {
+    if (shopProfile?.shop) {
+      const s = shopProfile.shop as any;
+      setEditForm({
+        ownerName: s.ownerName || "",
+        shopName: s.shopName || "",
+        phone: s.phone || "",
+        city: s.city || "",
+        address: s.address || "",
+        pincode: s.pincode || ""
+      });
+    }
+  }, [shopProfile]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`/api/shops/${slug}/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      refetchShopProfile();
+      alert("Profile updated successfully!");
+    } catch {
+      alert("Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const updateStatusMutation = useUpdateShopStatus({
     mutation: {
@@ -409,12 +455,30 @@ export default function Dashboard() {
               <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
                 <Scissors className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-bold text-sm">SlotCut</span>
+              <span className="font-bold text-sm">eNai</span>
             </div>
             <p className="text-slate-400 text-xs truncate">{shop.shopName}</p>
           </div>
 
           <div className="p-4 flex-1">
+            <nav className="space-y-1 mb-8">
+              {[
+                { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+                { id: "services", label: "Services", icon: <Scissors className="w-4 h-4" /> },
+                { id: "profile", label: "Barber Profile", icon: <Users className="w-4 h-4" /> },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id as any)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeSection === item.id ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  {item.icon} {item.label}
+                </button>
+              ))}
+            </nav>
+
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Shop Status</p>
             <button
               onClick={handleToggleOpen}
@@ -448,15 +512,6 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-
-            <div className="mt-6 space-y-1">
-              <button
-                onClick={() => navigate(`/shop/${slug}`)}
-                className="w-full text-left px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <ChevronRight className="w-3.5 h-3.5" /> View Shop Page
-              </button>
-            </div>
           </div>
 
           <div className="p-4 border-t border-slate-800">
@@ -510,221 +565,311 @@ export default function Dashboard() {
           </header>
 
           <div className="p-6">
-            {/* Stats Grid */}
-            {dashLoading ? (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
-              </div>
-            ) : dashboard && (
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                {[
-                  { label: "Today's Bookings", value: dashboard.todayBookings, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-                  { label: "Active Slots", value: dashboard.activeSlots, icon: Clock, color: "text-blue-700", bg: "bg-blue-50" },
-                  { label: "Available Chairs", value: dashboard.availableChairs, icon: TrendingUp, color: "text-slate-600", bg: "bg-slate-100" },
-                ].map(({ label, value, icon: Icon, color, bg }) => (
-                  <div key={label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                    <div className={`w-9 h-9 ${bg} rounded-lg flex items-center justify-center mb-3`}>
-                      <Icon className={`w-4 h-4 ${color}`} />
-                    </div>
-                    <p className="text-2xl font-black text-slate-900">{value}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+            {activeSection === "dashboard" && (
+              <>
+                {/* Stats Grid */}
+                {dashLoading ? (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {[1,2,3,4].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
                   </div>
-                ))}
+                ) : dashboard && (
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {[
+                      { label: "Today's Bookings", value: dashboard.todayBookings, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+                      { label: "Active Slots", value: dashboard.activeSlots, icon: Clock, color: "text-blue-700", bg: "bg-blue-50" },
+                      { label: "Available Chairs", value: dashboard.availableChairs, icon: TrendingUp, color: "text-slate-600", bg: "bg-slate-100" },
+                    ].map(({ label, value, icon: Icon, color, bg }) => (
+                      <div key={label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                        <div className={`w-9 h-9 ${bg} rounded-lg flex items-center justify-center mb-3`}>
+                          <Icon className={`w-4 h-4 ${color}`} />
+                        </div>
+                        <p className="text-2xl font-black text-slate-900">{value}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                  {/* Timeline + Bookings */}
+                  <div className="xl:col-span-2">
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg mb-4 w-fit">
+                      {(["timeline", "bookings"] as const).map((tab) => (
+                        <button
+                          key={tab}
+                          onClick={() => setDashboardSubTab(tab)}
+                          className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors capitalize ${
+                            dashboardSubTab === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                          }`}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Date picker for timeline */}
+                    {dashboardSubTab === "timeline" && (
+                      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                        {dates.map((d) => {
+                          const str = d.toISOString().split("T")[0];
+                          const active = str === selectedDate;
+                          return (
+                            <button
+                              key={str}
+                              onClick={() => setSelectedDate(str)}
+                              className={`flex-shrink-0 text-center px-3 py-2 rounded-lg border text-xs transition-all ${
+                                active
+                                  ? "bg-blue-600 border-blue-600 text-slate-900 font-bold"
+                                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+                              }`}
+                            >
+                              <div className="font-semibold">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]}</div>
+                              <div className="font-bold">{d.getDate()}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Clock Dial Grid */}
+                    {dashboardSubTab === "timeline" && (
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                          <h3 className="font-semibold text-slate-900 text-sm">Chair Clocks</h3>
+                          <div className="flex items-center gap-2">
+                            {[
+                              { label: "Confirmed", color: "#60a5fa" },
+                              { label: "Active", color: "#22c55e" },
+                              { label: "Done", color: "#94a3b8" },
+                              { label: "No-show", color: "#f87171" },
+                            ].map(({ label, color }) => (
+                              <span key={label} className="flex items-center gap-1 text-xs text-slate-500">
+                                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {timelineLoading ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 p-6">
+                            {[1,2,3,4,5,6].map(i => (
+                              <div key={i} className="flex flex-col items-center gap-2">
+                                <div className="w-full aspect-square max-w-[160px] rounded-full bg-slate-100 animate-pulse" />
+                                <div className="h-3 w-16 bg-slate-100 rounded animate-pulse" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 p-6">
+                            {timeline?.chairs.map((chair) => (
+                              <ClockDial
+                                key={chair.chairNumber}
+                                chair={chair}
+                                selectedDate={selectedDate}
+                                today={today}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Bookings List */}
+                    {dashboardSubTab === "bookings" && (
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <div className="px-5 py-3 border-b border-slate-100">
+                          <h3 className="font-semibold text-slate-900 text-sm">Today's Bookings</h3>
+                        </div>
+                        {bookingsLoading ? (
+                          <div className="p-5 space-y-3">
+                            {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />)}
+                          </div>
+                        ) : !bookings || bookings.length === 0 ? (
+                          <div className="p-10 text-center">
+                            <Scissors className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                            <p className="text-slate-400 text-sm">No bookings yet today</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-slate-100">
+                            {bookings.map((booking) => (
+                              <div key={booking.id} className="p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="font-semibold text-slate-900 text-sm">{booking.customerName}</p>
+                                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[booking.status] ?? ""}`}>
+                                        {booking.status.replace("_", " ")}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                      {booking.service?.name ?? "Service"} · Chair {booking.chairNumber} · {booking.slotTime} – {booking.slotEndTime}
+                                    </p>
+                                    <p className="text-xs text-slate-400">
+                                      {booking.paymentType === "token" ? "₹1 paid (token)" : `₹${booking.amountPaid} paid (full)`}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                                    {booking.status === "confirmed" && (
+                                      <>
+                                        <div className="flex gap-1">
+                                          <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={4}
+                                            placeholder="OTP"
+                                            value={otpInputs[booking.id] ?? ""}
+                                            onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                                            className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm text-center font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
+                                          />
+                                          <button
+                                            onClick={() => handleOtpVerify(booking.id)}
+                                            disabled={!otpInputs[booking.id] || otpInputs[booking.id]?.length !== 4}
+                                            className="px-2.5 py-1.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
+                                          >
+                                            <CheckCircle className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                        {otpErrors[booking.id] && (
+                                          <p className="text-xs text-red-500">{otpErrors[booking.id]}</p>
+                                        )}
+                                        <button
+                                          onClick={() => noShowMutation.mutate({ slug, bookingId: booking.id })}
+                                          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium"
+                                        >
+                                          <XCircle className="w-3 h-3" /> No-show
+                                        </button>
+                                      </>
+                                    )}
+                                    {booking.status === "active" && (
+                                      <button
+                                        onClick={() => completeMutation.mutate({ slug, bookingId: booking.id })}
+                                        className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors flex items-center gap-1"
+                                      >
+                                        <CheckCircle className="w-3.5 h-3.5" /> Complete
+                                      </button>
+                                    )}
+                                    {booking.status === "no_show" && (
+                                      <button
+                                        onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
+                                        disabled={undoNoShowMutation.isPending}
+                                        className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" /> Undo No-show
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeSection === "services" && (
+              <div className="max-w-2xl">
+                <h2 className="text-xl font-bold text-slate-900 mb-6">Manage Services</h2>
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  {shopProfile?.services?.length === 0 ? (
+                    <div className="p-8 text-center text-slate-500">No services added yet.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {shopProfile?.services?.map((service) => (
+                        <div key={service.id} className="p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-slate-900">{service.name}</p>
+                            <p className="text-sm text-slate-500">{service.durationMinutes} minutes</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-slate-900">₹{service.price}</p>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${service.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                              {service.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              {/* Timeline + Bookings */}
-              <div className="xl:col-span-2">
-                {/* Tabs */}
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg mb-4 w-fit">
-                  {(["timeline", "bookings", "photos"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors capitalize ${
-                        activeTab === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      {tab === "photos" ? "📸 Photos" : tab}
-                    </button>
-                  ))}
+            {activeSection === "profile" && (
+              <div className="max-w-4xl space-y-10 pb-8">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 mb-6">Barber Profile</h2>
+                  
+                  {/* Personal & Shop Information Form */}
+                  <form onSubmit={handleSaveProfile} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+                    <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
+                      <User className="w-5 h-5 text-blue-600" /> Personal & Shop Details
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Barber Name</label>
+                        <input type="text" required value={editForm.ownerName} onChange={e => setEditForm({...editForm, ownerName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Shop Name</label>
+                        <input type="text" required value={editForm.shopName} onChange={e => setEditForm({...editForm, shopName: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Phone Number</label>
+                        <div className="relative">
+                          <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                          <input type="tel" required value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Pincode</label>
+                        <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                      </div>
+                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div className="md:col-span-1">
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">City</label>
+                          <input type="text" required value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Full Address</label>
+                          <div className="relative">
+                            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                            <input type="text" required value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end pt-3 border-t border-slate-100 mt-5">
+                      <button type="submit" disabled={savingProfile} className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white font-semibold text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-70">
+                        {savingProfile ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <Save className="w-4 h-4" />} Save Changes
+                      </button>
+                    </div>
+                  </form>
                 </div>
 
-                {/* Date picker for timeline */}
-                {activeTab === "timeline" && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-                    {dates.map((d) => {
-                      const str = d.toISOString().split("T")[0];
-                      const active = str === selectedDate;
-                      return (
-                        <button
-                          key={str}
-                          onClick={() => setSelectedDate(str)}
-                          className={`flex-shrink-0 text-center px-3 py-2 rounded-lg border text-xs transition-all ${
-                            active
-                              ? "bg-blue-600 border-blue-600 text-slate-900 font-bold"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
-                          }`}
-                        >
-                          <div className="font-semibold">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]}</div>
-                          <div className="font-bold">{d.getDate()}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Clock Dial Grid */}
-                {activeTab === "timeline" && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-slate-900 text-sm">Chair Clocks</h3>
-                      <div className="flex items-center gap-2">
-                        {[
-                          { label: "Confirmed", color: "#60a5fa" },
-                          { label: "Active", color: "#22c55e" },
-                          { label: "Done", color: "#94a3b8" },
-                          { label: "No-show", color: "#f87171" },
-                        ].map(({ label, color }) => (
-                          <span key={label} className="flex items-center gap-1 text-xs text-slate-500">
-                            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />
-                            {label}
-                          </span>
-                        ))}
-                      </div>
+                {/* Photos & Portfolio Section */}
+                <div>
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-4">
+                    <Camera className="w-5 h-5 text-blue-600" /> Photos & Portfolio
+                  </h3>
+                  
+                  {portfolioError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm mb-4">
+                      {portfolioError}
                     </div>
+                  )}
 
-                    {timelineLoading ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 p-6">
-                        {[1,2,3,4,5,6].map(i => (
-                          <div key={i} className="flex flex-col items-center gap-2">
-                            <div className="w-full aspect-square max-w-[160px] rounded-full bg-slate-100 animate-pulse" />
-                            <div className="h-3 w-16 bg-slate-100 rounded animate-pulse" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 p-6">
-                        {timeline?.chairs.map((chair) => (
-                          <ClockDial
-                            key={chair.chairNumber}
-                            chair={chair}
-                            selectedDate={selectedDate}
-                            today={today}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Bookings List */}
-                {activeTab === "bookings" && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="px-5 py-3 border-b border-slate-100">
-                      <h3 className="font-semibold text-slate-900 text-sm">Today's Bookings</h3>
-                    </div>
-                    {bookingsLoading ? (
-                      <div className="p-5 space-y-3">
-                        {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />)}
-                      </div>
-                    ) : !bookings || bookings.length === 0 ? (
-                      <div className="p-10 text-center">
-                        <Scissors className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                        <p className="text-slate-400 text-sm">No bookings yet today</p>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-slate-100">
-                        {bookings.map((booking) => (
-                          <div key={booking.id} className="p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="font-semibold text-slate-900 text-sm">{booking.customerName}</p>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[booking.status] ?? ""}`}>
-                                    {booking.status.replace("_", " ")}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {booking.service?.name ?? "Service"} · Chair {booking.chairNumber} · {booking.slotTime} – {booking.slotEndTime}
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                  {booking.paymentType === "token" ? "₹1 paid (token)" : `₹${booking.amountPaid} paid (full)`}
-                                </p>
-                              </div>
-                              <div className="flex flex-col gap-1.5 flex-shrink-0">
-                                {booking.status === "confirmed" && (
-                                  <>
-                                    <div className="flex gap-1">
-                                      <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        maxLength={4}
-                                        placeholder="OTP"
-                                        value={otpInputs[booking.id] ?? ""}
-                                        onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                                        className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm text-center font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                      />
-                                      <button
-                                        onClick={() => handleOtpVerify(booking.id)}
-                                        disabled={!otpInputs[booking.id] || otpInputs[booking.id]?.length !== 4}
-                                        className="px-2.5 py-1.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
-                                      >
-                                        <CheckCircle className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                    {otpErrors[booking.id] && (
-                                      <p className="text-xs text-red-500">{otpErrors[booking.id]}</p>
-                                    )}
-                                    <button
-                                      onClick={() => noShowMutation.mutate({ slug, bookingId: booking.id })}
-                                      className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium"
-                                    >
-                                      <XCircle className="w-3 h-3" /> No-show
-                                    </button>
-                                  </>
-                                )}
-                                {booking.status === "active" && (
-                                  <button
-                                    onClick={() => completeMutation.mutate({ slug, bookingId: booking.id })}
-                                    className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors flex items-center gap-1"
-                                  >
-                                    <CheckCircle className="w-3.5 h-3.5" /> Complete
-                                  </button>
-                                )}
-                                {booking.status === "no_show" && (
-                                  <button
-                                    onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
-                                    disabled={undoNoShowMutation.isPending}
-                                    className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
-                                  >
-                                    <RefreshCw className="w-3.5 h-3.5" /> Undo No-show
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Photos tab */}
-                {activeTab === "photos" && (
-                  <div className="space-y-6">
-                    {portfolioError && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                        {portfolioError}
-                      </div>
-                    )}
-
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     {/* Profile Photo */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                      <h3 className="font-semibold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-blue-600" /> Profile / Cover Photo
-                      </h3>
+                      <h4 className="font-medium text-slate-900 text-sm mb-3">Profile / Cover Photo</h4>
                       <ImageUpload
                         label="Main shop photo"
                         multiple={false}
@@ -769,9 +914,7 @@ export default function Dashboard() {
 
                     {/* Interior Photos */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                      <h3 className="font-semibold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-blue-600" /> Interior / Salon Photos
-                      </h3>
+                      <h4 className="font-medium text-slate-900 text-sm mb-3">Interior / Salon Photos</h4>
                       {(() => {
                         const current: string[] = interiorPaths !== null
                           ? interiorPaths
@@ -816,40 +959,40 @@ export default function Dashboard() {
                         );
                       })()}
                     </div>
+                  </div>
 
-                    {/* Portfolio Photos */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                      <h3 className="font-semibold text-slate-900 text-sm mb-1 flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-blue-600" /> Portfolio / Work Showcase
-                      </h3>
-                      <p className="text-xs text-slate-400 mb-4">Hairstyles and your best work. Customers see this before booking.</p>
-                      {(() => {
-                        const portfolioPaths: string[] = ((shopProfile?.shop as any)?.portfolioPhotos as string[]) ?? [];
-                        return (
-                          <>
-                            {portfolioPaths.length > 0 && (
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-4">
-                                {portfolioPaths.map((p, i) => (
-                                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
-                                    <img src={photoUrl(p)} alt={`portfolio-${i}`} className="w-full h-full object-cover" />
-                                    <button
-                                      onClick={async () => {
-                                        setPortfolioError("");
-                                        try {
-                                          await fetch(`/api/shops/${slug}/portfolio/${i}`, { method: "DELETE" });
-                                          refetchShopProfile();
-                                        } catch {
-                                          setPortfolioError("Failed to delete photo.");
-                                        }
-                                      }}
-                                      className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <Trash2 className="w-4 h-4 text-white" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                  {/* Portfolio Photos */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                    <h4 className="font-medium text-slate-900 text-sm mb-1">Portfolio Showcase</h4>
+                    <p className="text-xs text-slate-400 mb-4">Hairstyles and your best work. Customers see this before booking.</p>
+                    {(() => {
+                      const portfolioPaths: string[] = ((shopProfile?.shop as any)?.portfolioPhotos as string[]) ?? [];
+                      return (
+                        <>
+                          {portfolioPaths.length > 0 && (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+                              {portfolioPaths.map((p, i) => (
+                                <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                                  <img src={photoUrl(p)} alt={`portfolio-${i}`} className="w-full h-full object-cover" />
+                                  <button
+                                    onClick={async () => {
+                                      setPortfolioError("");
+                                      try {
+                                        await fetch(`/api/shops/${slug}/portfolio/${i}`, { method: "DELETE" });
+                                        refetchShopProfile();
+                                      } catch {
+                                        setPortfolioError("Failed to delete photo.");
+                                      }
+                                    }}
+                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-white" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="max-w-md">
                             <ImageUpload
                               label="Add portfolio photos"
                               multiple
@@ -875,14 +1018,60 @@ export default function Dashboard() {
                               }}
                             />
                             {portfolioUploading && (
-                              <p className="text-xs text-blue-700 mt-1">Saving portfolio photos...</p>
+                              <p className="text-xs text-blue-700 mt-2 font-medium">Saving portfolio photos...</p>
                             )}
-                          </>
-                        );
-                      })()}
-                    </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
-                )}
+                </div>
+
+                {/* Account & Support */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Contact Support */}
+                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col justify-center">
+                    <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-2">
+                      <Mail className="w-5 h-5 text-blue-600" /> Contact Support
+                    </h3>
+                    <p className="text-sm text-slate-500 mb-4">Need help with your account, billing, or features? We're here 24/7.</p>
+                    <a href="mailto:support@enai.in" className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-semibold text-sm rounded-lg hover:bg-slate-200 transition-colors w-fit">
+                      <Mail className="w-4 h-4" /> Email support@enai.in
+                    </a>
+                  </div>
+
+                  {/* Danger Zone */}
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                    <h3 className="text-red-800 font-bold mb-2 flex items-center gap-2">
+                       <AlertTriangle className="w-5 h-5" /> Danger Zone
+                    </h3>
+                    <p className="text-red-600 text-sm mb-4">
+                      Deleting your account will permanently remove your shop, bookings, and all associated data. This action cannot be undone.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        if (window.confirm("Are you sure you want to permanently delete your account? This cannot be undone.")) {
+                          try {
+                            await fetch(`/api/barbers/me`, {
+                              method: "DELETE",
+                              headers: { "Authorization": `Bearer ${token}` }
+                            });
+                            logout();
+                            navigate("/");
+                          } catch (e) {
+                            alert("Failed to delete account");
+                          }
+                        }
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors"
+                    >
+                      Delete My Account
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            )}
               </div>
 
               {/* Right panel: activity + revenue */}
@@ -965,8 +1154,6 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

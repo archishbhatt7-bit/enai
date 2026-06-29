@@ -183,7 +183,7 @@ export default function AvatarUpload({ currentPath, onUploaded, className = "" }
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) { setError("Only images allowed"); return; }
-    if (file.size > 10 * 1024 * 1024) { setError("Max 10 MB"); return; }
+    if (file.size > 4 * 1024 * 1024) { setError("Max 4 MB"); return; }
     setError("");
     setCropFile(file);
     if (inputRef.current) inputRef.current.value = "";

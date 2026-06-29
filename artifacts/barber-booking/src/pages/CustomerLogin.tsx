@@ -59,7 +59,7 @@ export default function CustomerLogin() {
         <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl mb-5">
           <Scissors className="w-8 h-8 text-slate-900" />
         </div>
-        <h1 className="text-3xl font-black text-white tracking-tight">SlotCut</h1>
+        <h1 className="text-3xl font-black text-white tracking-tight">eNai</h1>
         <p className="text-slate-400 text-sm mt-1">Customer Sign In</p>
       </div>
 

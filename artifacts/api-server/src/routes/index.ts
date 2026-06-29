@@ -5,6 +5,7 @@ import shopsRouter from "./shops";
 import servicesRouter from "./services";
 import bookingsRouter from "./bookings";
 import storageRouter from "./storage";
+import barbersRouter from "./barbers";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(shopsRouter);
 router.use(servicesRouter);
 router.use(bookingsRouter);
 router.use(storageRouter);
+router.use(barbersRouter);
 
 export default router;

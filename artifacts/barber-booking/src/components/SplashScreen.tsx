@@ -88,7 +88,7 @@ const CenterText = () => (
         lineHeight: 1,
       }}
     >
-      SlotCut
+      eNai
     </div>
   </div>
 );

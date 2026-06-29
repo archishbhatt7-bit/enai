@@ -44,8 +44,8 @@ export default function ImageUpload({
           setUploading(false);
           return;
         }
-        if (file.size > 8 * 1024 * 1024) {
-          setError("Each image must be under 8 MB.");
+        if (file.size > 4 * 1024 * 1024) {
+          setError("Each image must be under 4 MB.");
           setUploading(false);
           return;
         }
@@ -139,7 +139,7 @@ export default function ImageUpload({
               <p className="text-xs text-slate-500 text-center">
                 Click to upload{multiple ? " (select multiple)" : ""}
               </p>
-              <p className="text-xs text-slate-400">JPG, PNG, WebP · max 8 MB each</p>
+              <p className="text-xs text-slate-400">JPG, PNG, WebP · max 4 MB each</p>
             </>
           ) : (
             <>

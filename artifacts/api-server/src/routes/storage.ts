@@ -1,5 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { Readable } from "stream";
+import fs from "fs/promises";
+import path from "path";
+import express from "express";
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
@@ -9,6 +12,19 @@ import { ObjectPermission } from "../lib/objectAcl";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
+
+router.put("/storage/local-upload/:objectId", express.raw({ type: "*/*", limit: "10mb" }), async (req: Request, res: Response) => {
+  try {
+    const objectId = req.params.objectId;
+    const uploadDir = path.join(process.cwd(), "uploads");
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.writeFile(path.join(uploadDir, objectId), req.body);
+    res.status(200).send("OK");
+  } catch (error) {
+    req.log.error({ err: error }, "Local upload failed");
+    res.status(500).json({ error: "Local upload failed" });
+  }
+});
 
 /**
  * POST /storage/uploads/request-url
@@ -88,10 +104,17 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
+
+    if (!process.env.PRIVATE_OBJECT_DIR) {
+      const filePath = path.join(process.cwd(), "uploads", wildcardPath);
+      res.sendFile(filePath);
+      return;
+    }
+
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
 
-    // --- Protected route example (uncomment when using replit-auth) ---
+    // --- Protected route example ---
     // if (!req.isAuthenticated()) {
     //   res.status(401).json({ error: "Unauthorized" });
     //   return;

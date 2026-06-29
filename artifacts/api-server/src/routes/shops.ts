@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, shopsTable, servicesTable, bookingsTable } from "@workspace/db";
 import { eq, and, ilike, or, gte, lte, sql } from "drizzle-orm";
-import { z } from "zod/v4";
+
 
 const router = Router();
 
@@ -136,7 +136,7 @@ router.patch("/shops/:slug/settings", async (req, res) => {
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
 
-  const { shopName, numChairs, numBarbers, openTime, closeTime, city, address } = req.body;
+  const { shopName, numChairs, numBarbers, openTime, closeTime, city, address, ownerName, phone, pincode } = req.body;
   const update: Record<string, unknown> = {};
   if (shopName !== undefined) update.shopName = shopName;
   if (numChairs !== undefined) update.numChairs = numChairs;
@@ -145,6 +145,9 @@ router.patch("/shops/:slug/settings", async (req, res) => {
   if (closeTime !== undefined) update.closeTime = closeTime;
   if (city !== undefined) update.city = city;
   if (address !== undefined) update.address = address;
+  if (ownerName !== undefined) update.ownerName = ownerName;
+  if (phone !== undefined) update.phone = phone;
+  if (pincode !== undefined) update.pincode = pincode;
 
   const [updated] = await db
     .update(shopsTable)
