@@ -3,12 +3,14 @@
   "installCommand": "cd ../.. && npm i -g pnpm && pnpm install",
   "buildCommand": "cd ../.. && pnpm --filter @workspace/db run build && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build",
   "outputDirectory": ".",
-  "functions": {
-    "dist/vercel.mjs": {
-      "includeFiles": "dist/**"
+  "builds": [
+    {
+      "src": "dist/vercel.mjs",
+      "use": "@vercel/node",
+      "config": { "includeFiles": ["dist/**"] }
     }
-  },
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/dist/vercel.mjs" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/dist/vercel.mjs" }
   ]
 }
