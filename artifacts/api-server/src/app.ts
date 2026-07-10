@@ -1,11 +1,10 @@
-// @ts-nocheck
 import express, { type Express } from "express";
 import cors from "cors";
-const pinoHttp = require("pino-http");
+import helmet from "helmet";
+import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { rateLimit } from "./middleware/rateLimit";
-const helmet = require("helmet");
 
 const app: Express = express();
 
