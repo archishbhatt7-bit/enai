@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: enai-api
+    env: node
+    region: singapore
+    branch: main
+    buildCommand: npm i -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @workspace/db run build && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

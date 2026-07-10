@@ -17,7 +17,12 @@ import ShopPage from "@/pages/ShopPage";
 import Dashboard from "@/pages/Dashboard";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+
+// In production, API calls go to the Render backend URL
+if (import.meta.env.VITE_API_URL) {
+  setBaseUrl(import.meta.env.VITE_API_URL);
+}
 
 setAuthTokenGetter(() => {
   const path = window.location.pathname;
