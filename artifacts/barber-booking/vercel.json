@@ -1,4 +1,7 @@
 {
+  "installCommand": "cd ../.. && npm i -g pnpm && pnpm install",
+  "buildCommand": "cd ../.. && pnpm --filter @workspace/api-client-react run build && pnpm --filter @workspace/barber-booking run build",
+  "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
