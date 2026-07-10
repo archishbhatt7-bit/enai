@@ -21,7 +21,7 @@ router.put("/storage/local-upload/:objectId", requireOwnerAuth, express.raw({ ty
     if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(objectId)) {
       return res.status(400).json({ error: "Invalid object ID format" });
     }
-    const uploadDir = path.join(process.cwd(), "uploads");
+    const uploadDir = process.env.VERCEL ? path.join("/tmp", "uploads") : path.join(process.cwd(), "uploads");
     await fs.mkdir(uploadDir, { recursive: true });
     await fs.writeFile(path.join(uploadDir, objectId), req.body);
     res.status(200).send("OK");
@@ -132,7 +132,8 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
         res.status(400).json({ error: "Invalid object ID format" });
         return;
       }
-      const filePath = path.join(process.cwd(), "uploads", wildcardPath);
+      const uploadDir = process.env.VERCEL ? path.join("/tmp", "uploads") : path.join(process.cwd(), "uploads");
+      const filePath = path.join(uploadDir, wildcardPath);
       res.sendFile(filePath);
       return;
     }
