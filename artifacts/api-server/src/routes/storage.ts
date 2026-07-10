@@ -9,13 +9,18 @@ import {
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
+import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
-router.put("/storage/local-upload/:objectId", express.raw({ type: "*/*", limit: "10mb" }), async (req: Request, res: Response) => {
+router.put("/storage/local-upload/:objectId", requireOwnerAuth, express.raw({ type: "*/*", limit: "4mb" }), async (req: any, res: any) => {
   try {
-    const objectId = req.params.objectId;
+    const objectId = req.params.objectId as string;
+    // Validate objectId is a UUID to prevent path traversal (e.g. ../../etc/passwd)
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(objectId)) {
+      return res.status(400).json({ error: "Invalid object ID format" });
+    }
     const uploadDir = path.join(process.cwd(), "uploads");
     await fs.mkdir(uploadDir, { recursive: true });
     await fs.writeFile(path.join(uploadDir, objectId), req.body);
@@ -33,7 +38,7 @@ router.put("/storage/local-upload/:objectId", express.raw({ type: "*/*", limit: 
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
  */
-router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", requireOwnerAuth, async (req: OwnerAuthRequest, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -42,6 +47,16 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
 
   try {
     const { name, size, contentType } = parsed.data;
+
+    if (size > 4 * 1024 * 1024) {
+      res.status(400).json({ error: "File exceeds 4MB limit" });
+      return;
+    }
+
+    if (!contentType.startsWith("image/")) {
+      res.status(400).json({ error: "Only image uploads are allowed" });
+      return;
+    }
 
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
@@ -105,7 +120,18 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
 
+    // Prevent path traversal attacks
+    if (wildcardPath.includes("..") || wildcardPath.includes("\\")) {
+      res.status(400).json({ error: "Invalid object path" });
+      return;
+    }
+
     if (!process.env.PRIVATE_OBJECT_DIR) {
+      // Local mode: validate path is a UUID to prevent arbitrary file access
+      if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(wildcardPath)) {
+        res.status(400).json({ error: "Invalid object ID format" });
+        return;
+      }
       const filePath = path.join(process.cwd(), "uploads", wildcardPath);
       res.sendFile(filePath);
       return;

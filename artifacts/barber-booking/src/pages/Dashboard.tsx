@@ -33,6 +33,7 @@ import {
   Users,
   AlertTriangle,
   ChevronRight,
+  ChevronLeft,
   Camera,
   Trash2,
   Calendar,
@@ -44,6 +45,7 @@ import {
   Phone,
   MapPin,
   Save,
+  Menu,
 } from "lucide-react";
 import ImageUpload, { photoUrl } from "@/components/ImageUpload";
 import WeeklyScheduleModal from "@/components/WeeklyScheduleModal";
@@ -236,7 +238,7 @@ export default function Dashboard() {
   const [otpInputs, setOtpInputs] = useState<Record<number, string>>({});
   const [otpErrors, setOtpErrors] = useState<Record<number, string>>({});
   const prevBookingCount = useRef<number>(0);
-  const [activeSection, setActiveSection] = useState<"dashboard" | "services" | "profile" | "personal" | "settings">("dashboard");
+  const [activeSection, setActiveSection] = useState<"dashboard" | "orders" | "services" | "profile" | "personal" | "settings">("dashboard");
   const [dashboardSubTab, setDashboardSubTab] = useState<"timeline" | "bookings">("timeline");
   const [portfolioUploading, setPortfolioUploading] = useState(false);
   const [portfolioError, setPortfolioError] = useState("");
@@ -248,6 +250,8 @@ export default function Dashboard() {
     ownerName: "", shopName: "", phone: "", city: "", address: "", pincode: ""
   });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   // Redirect if not authenticated or wrong shop
   useEffect(() => {
@@ -283,20 +287,23 @@ export default function Dashboard() {
     query: {
       queryKey: getListBookingsQueryKey(slug),
       refetchInterval: 30_000,
-      onSuccess: (data: any[]) => {
-        if (prevBookingCount.current > 0 && data.length > prevBookingCount.current) {
-          playAlert();
-        }
-        prevBookingCount.current = data.length;
-      },
-    },
+    }
   });
+
+  useEffect(() => {
+    if (bookings) {
+      if (prevBookingCount.current > 0 && bookings.length > prevBookingCount.current) {
+        playAlert();
+      }
+      prevBookingCount.current = bookings.length;
+    }
+  }, [bookings]);
 
   const { data: activity } = useGetRecentActivity(slug, {
     query: { queryKey: getGetRecentActivityQueryKey(slug), refetchInterval: 30_000 },
   });
 
-  const { data: revenue } = useGetRevenueStats(slug);
+  const { data: revenue } = useGetRevenueStats(slug, { weeksAgo: weekOffset });
 
   const { data: shopProfile, refetch: refetchShopProfile } = useGetShop(slug);
 
@@ -415,7 +422,7 @@ export default function Dashboard() {
 
   const handleOtpVerify = (bookingId: number) => {
     const otp = otpInputs[bookingId];
-    if (!otp || otp.length !== 4) return;
+    if (!otp || otp.length !== 6) return;
     verifyOtpMutation.mutate({ slug, bookingId, data: { otp } });
   };
 
@@ -443,16 +450,59 @@ export default function Dashboard() {
     return d;
   });
 
+  const SidebarContent = () => (
+    <div className="p-4 flex-1">
+      <nav className="space-y-1 mb-8">
+        {[
+          { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+          { id: "orders", label: "Orders", icon: <CheckCircle className="w-4 h-4" /> },
+          { id: "services", label: "Services", icon: <Scissors className="w-4 h-4" /> },
+          { id: "profile", label: "Barber Profile", icon: <Users className="w-4 h-4" /> },
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => { setActiveSection(item.id as any); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeSection === item.id ? "bg-white/10 text-white" : "text-blue-200 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            {item.icon} {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-3">Shop Status</p>
+      <div className="space-y-2">
+        <button
+          onClick={handleToggleOpen}
+          disabled={updateStatusMutation.isPending}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+            shop.isOpen ? "bg-green-600 text-white hover:bg-green-700" : "bg-white/10 text-slate-300 hover:bg-white/20"
+          }`}
+        >
+          <span>{shop.isOpen ? "Open" : "Closed"}</span>
+          {shop.isOpen ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+        </button>
+        <button
+          onClick={() => setShowWeeklyModal(true)}
+          className="w-full flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+        >
+          <Clock className="w-4 h-4" /> Edit Hours
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar + main layout */}
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-52 bg-slate-900 text-white flex-shrink-0 flex flex-col hidden lg:flex">
-          <div className="p-5 border-b border-slate-800">
+        <aside className="w-52 bg-gradient-to-b from-blue-900 to-blue-950 text-white flex-shrink-0 flex flex-col hidden lg:flex">
+          <div className="p-5 border-b border-blue-800/50">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
+              <div className="w-7 h-7 bg-blue-500 rounded-md flex items-center justify-center">
                 <Scissors className="w-3.5 h-3.5 text-white" />
               </div>
               <span className="font-bold text-sm">eNai</span>
@@ -464,6 +514,7 @@ export default function Dashboard() {
             <nav className="space-y-1 mb-8">
               {[
                 { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-4 h-4" /> },
+                { id: "orders", label: "Orders", icon: <CheckCircle className="w-4 h-4" /> },
                 { id: "services", label: "Services", icon: <Scissors className="w-4 h-4" /> },
                 { id: "profile", label: "Barber Profile", icon: <Users className="w-4 h-4" /> },
               ].map((item) => (
@@ -526,41 +577,26 @@ export default function Dashboard() {
 
         {/* Main content */}
         <div className="flex-1 overflow-y-auto">
-          {/* Top bar */}
-          <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-            <div>
-              <h1 className="font-bold text-slate-900">{shop.shopName}</h1>
-              <p className="text-xs text-slate-400">{shop.city} · {shop.numChairs} chairs</p>
-            </div>
+          {/* Top bar (Mobile Only) */}
+          <header className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowWeeklyModal(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
               >
-                <Clock className="w-3.5 h-3.5" /> Edit Hours
+                <Menu className="w-5 h-5" />
               </button>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+              <div>
+                <h1 className="font-bold text-slate-900 leading-tight">{shop.shopName}</h1>
+                <p className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">{shop.city}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${
                 shop.isOpen && !shop.isPaused ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
               }`}>
                 {!shop.isOpen ? "Closed" : shop.isPaused ? "Paused" : "Open"}
               </span>
-              {/* Mobile controls */}
-              <div className="lg:hidden flex gap-2">
-                <button
-                  onClick={handleToggleOpen}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                    shop.isOpen ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {shop.isOpen ? "Open" : "Closed"}
-                </button>
-                <button
-                  onClick={() => { logout(); navigate("/"); }}
-                  className="p-1.5 text-slate-400"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </header>
 
@@ -593,24 +629,8 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                   {/* Timeline + Bookings */}
                   <div className="xl:col-span-2">
-                    {/* Tabs */}
-                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg mb-4 w-fit">
-                      {(["timeline", "bookings"] as const).map((tab) => (
-                        <button
-                          key={tab}
-                          onClick={() => setDashboardSubTab(tab)}
-                          className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors capitalize ${
-                            dashboardSubTab === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                          }`}
-                        >
-                          {tab}
-                        </button>
-                      ))}
-                    </div>
-
                     {/* Date picker for timeline */}
-                    {dashboardSubTab === "timeline" && (
-                      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                    <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
                         {dates.map((d) => {
                           const str = d.toISOString().split("T")[0];
                           const active = str === selectedDate;
@@ -630,10 +650,8 @@ export default function Dashboard() {
                           );
                         })}
                       </div>
-                    )}
 
                     {/* Clock Dial Grid */}
-                    {dashboardSubTab === "timeline" && (
                       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                         <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                           <h3 className="font-semibold text-slate-900 text-sm">Chair Clocks</h3>
@@ -674,102 +692,207 @@ export default function Dashboard() {
                           </div>
                         )}
                       </div>
+                  </div>
+
+                  {/* Right panel: activity + revenue */}
+                  <div className="space-y-5">
+                    {/* Revenue chart */}
+                    {revenue && revenue.length > 0 && (
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-semibold text-slate-900 text-sm">Revenue</h3>
+                          <div className="flex gap-2">
+                            <button onClick={() => setWeekOffset(Math.min(weekOffset + 1, 1))} disabled={weekOffset >= 1} className="p-1 hover:bg-slate-100 rounded disabled:opacity-30">
+                              <ChevronLeft className="w-4 h-4"/>
+                            </button>
+                            <button onClick={() => setWeekOffset(Math.max(weekOffset - 1, 0))} disabled={weekOffset <= 0} className="p-1 hover:bg-slate-100 rounded disabled:opacity-30">
+                              <ChevronRight className="w-4 h-4"/>
+                            </button>
+                          </div>
+                        </div>
+                        <ResponsiveContainer width="100%" height={120}>
+                          <BarChart data={revenueData} barSize={16}>
+                            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                            <YAxis hide />
+                            <Tooltip
+                              contentStyle={{ fontSize: 11, border: "1px solid #e2e8f0", borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}
+                              formatter={(val: any) => [`₹${val}`, "Revenue"]}
+                            />
+                            <Bar dataKey="revenue" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     )}
 
-                    {/* Bookings List */}
-                    {dashboardSubTab === "bookings" && (
-                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-                        <div className="px-5 py-3 border-b border-slate-100">
-                          <h3 className="font-semibold text-slate-900 text-sm">Today's Bookings</h3>
-                        </div>
-                        {bookingsLoading ? (
-                          <div className="p-5 space-y-3">
-                            {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />)}
-                          </div>
-                        ) : !bookings || bookings.length === 0 ? (
-                          <div className="p-10 text-center">
-                            <Scissors className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                            <p className="text-slate-400 text-sm">No bookings yet today</p>
-                          </div>
+                    {/* Recent Activity */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                      <div className="px-5 py-3 border-b border-slate-100">
+                        <h3 className="font-semibold text-slate-900 text-sm">Recent Activity</h3>
+                      </div>
+                      <div className="divide-y divide-slate-50">
+                        {!activity || activity.length === 0 ? (
+                          <div className="p-5 text-center text-slate-400 text-sm">No activity yet</div>
                         ) : (
-                          <div className="divide-y divide-slate-100">
-                            {bookings.map((booking) => (
-                              <div key={booking.id} className="p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <p className="font-semibold text-slate-900 text-sm">{booking.customerName}</p>
-                                      <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[booking.status] ?? ""}`}>
-                                        {booking.status.replace("_", " ")}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-slate-400 mt-1">
-                                      {booking.service?.name ?? "Service"} · Chair {booking.chairNumber} · {booking.slotTime} – {booking.slotEndTime}
-                                    </p>
-                                    <p className="text-xs text-slate-400">
-                                      {booking.paymentType === "token" ? "₹1 paid (token)" : `₹${booking.amountPaid} paid (full)`}
-                                    </p>
-                                  </div>
-                                  <div className="flex flex-col gap-1.5 flex-shrink-0">
-                                    {booking.status === "confirmed" && (
-                                      <>
-                                        <div className="flex gap-1">
-                                          <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            maxLength={4}
-                                            placeholder="OTP"
-                                            value={otpInputs[booking.id] ?? ""}
-                                            onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
-                                            className="w-16 px-2 py-1.5 border border-slate-300 rounded text-sm text-center font-mono focus:outline-none focus:ring-1 focus:ring-blue-600"
-                                          />
-                                          <button
-                                            onClick={() => handleOtpVerify(booking.id)}
-                                            disabled={!otpInputs[booking.id] || otpInputs[booking.id]?.length !== 4}
-                                            className="px-2.5 py-1.5 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
-                                          >
-                                            <CheckCircle className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                        {otpErrors[booking.id] && (
-                                          <p className="text-xs text-red-500">{otpErrors[booking.id]}</p>
-                                        )}
-                                        <button
-                                          onClick={() => noShowMutation.mutate({ slug, bookingId: booking.id })}
-                                          className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium"
-                                        >
-                                          <XCircle className="w-3 h-3" /> No-show
-                                        </button>
-                                      </>
-                                    )}
-                                    {booking.status === "active" && (
-                                      <button
-                                        onClick={() => completeMutation.mutate({ slug, bookingId: booking.id })}
-                                        className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors flex items-center gap-1"
-                                      >
-                                        <CheckCircle className="w-3.5 h-3.5" /> Complete
-                                      </button>
-                                    )}
-                                    {booking.status === "no_show" && (
-                                      <button
-                                        onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
-                                        disabled={undoNoShowMutation.isPending}
-                                        className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors flex items-center gap-1 disabled:opacity-50"
-                                      >
-                                        <RefreshCw className="w-3.5 h-3.5" /> Undo No-show
-                                      </button>
-                                    )}
-                                  </div>
+                          activity.map((item) => {
+                            const colors: Record<string, string> = {
+                              new_booking: "bg-blue-100 text-blue-600",
+                              arrival: "bg-green-100 text-green-600",
+                              no_show: "bg-red-100 text-red-500",
+                              completed: "bg-slate-100 text-slate-500",
+                              cancelled: "bg-slate-100 text-slate-400",
+                            };
+                            const icons: Record<string, React.ReactNode> = {
+                              new_booking: <Clock className="w-3 h-3" />,
+                              arrival: <CheckCircle className="w-3 h-3" />,
+                              no_show: <AlertTriangle className="w-3 h-3" />,
+                              completed: <CheckCircle className="w-3 h-3" />,
+                              cancelled: <XCircle className="w-3 h-3" />,
+                            };
+                            return (
+                              <div key={item.id} className="px-5 py-3 flex items-start gap-3">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${colors[item.type] ?? "bg-slate-100 text-slate-500"}`}>
+                                  {icons[item.type]}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 truncate">{item.customerName}</p>
+                                  <p className="text-xs text-slate-400 truncate">{item.serviceName} · {item.slotTime}</p>
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                            );
+                          })
                         )}
+                      </div>
+                    </div>
+
+                    {/* Quick Stats */}
+                    {dashboard && (
+                      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <h3 className="font-semibold text-slate-900 text-sm mb-3">Today's Summary</h3>
+                        <div className="space-y-2">
+                          {[
+                            { label: "Completed", value: dashboard.completedToday, color: "text-green-600" },
+                            { label: "No-shows", value: dashboard.noShowsToday, color: "text-red-500" },
+                            { label: "Weekly Bookings", value: dashboard.weeklyBookings, color: "text-blue-600" },
+                            { label: "Weekly Revenue", value: `₹${dashboard.weeklyRevenue}`, color: "text-blue-700" },
+                          ].map(({ label, value, color }) => (
+                            <div key={label} className="flex items-center justify-between py-1">
+                              <span className="text-xs text-slate-500">{label}</span>
+                              <span className={`text-sm font-bold ${color}`}>{value}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               </>
+            )}
+
+            {activeSection === "orders" && (
+              <div className="max-w-4xl">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black text-slate-900">Orders & Verification</h2>
+                  <p className="text-slate-500 text-sm mt-1">Verify customer arrivals with their OTP code.</p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900 text-sm">Today's Orders</h3>
+                    <span className="text-xs text-slate-400">{bookings?.length ?? 0} orders</span>
+                  </div>
+                  {bookingsLoading ? (
+                    <div className="p-5 space-y-3">
+                      {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />)}
+                    </div>
+                  ) : !bookings || bookings.length === 0 ? (
+                    <div className="p-16 text-center">
+                      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Calendar className="w-8 h-8 text-blue-300" />
+                      </div>
+                      <p className="text-slate-900 font-bold text-lg mb-1">No orders right now</p>
+                      <p className="text-slate-400 text-sm">When customers book a slot, their orders will appear here.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {bookings.map((booking) => (
+                        <div key={booking.id} className={`p-5 transition-colors ${booking.status === "confirmed" ? "bg-blue-50/30" : ""}`}>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-slate-900">{booking.customerName}</p>
+                                <span className={`text-xs px-2.5 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[booking.status] ?? ""}`}>
+                                  {booking.status.replace("_", " ")}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-500 mt-1">
+                                {booking.service?.name ?? "Service"} · Chair {booking.chairNumber}
+                              </p>
+                              <p className="text-sm text-slate-400">
+                                {booking.slotTime} – {booking.slotEndTime} · {booking.paymentType === "token" ? "₹1 token" : `₹${booking.amountPaid} paid`}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+                              {booking.status === "confirmed" && (
+                                <>
+                                  <div className="flex gap-1.5">
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      maxLength={6}
+                                      placeholder="Enter OTP"
+                                      value={otpInputs[booking.id] || ""}
+                                      onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                                      className="w-28 px-3 py-2 border border-slate-300 rounded-lg text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <button
+                                      onClick={() => handleOtpVerify(booking.id)}
+                                      disabled={!otpInputs[booking.id] || otpInputs[booking.id]?.length !== 6}
+                                      className="px-3 py-2 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 disabled:opacity-40 transition-colors flex items-center gap-1"
+                                    >
+                                      <CheckCircle className="w-4 h-4" /> Verify
+                                    </button>
+                                  </div>
+                                  {otpErrors[booking.id] && (
+                                    <p className="text-xs text-red-500 font-medium">{otpErrors[booking.id]}</p>
+                                  )}
+                                  <button
+                                    onClick={() => noShowMutation.mutate({ slug, bookingId: booking.id })}
+                                    className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5" /> Mark No-show
+                                  </button>
+                                </>
+                              )}
+                              {booking.status === "active" && (
+                                <button
+                                  onClick={() => completeMutation.mutate({ slug, bookingId: booking.id })}
+                                  className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors flex items-center gap-1.5"
+                                >
+                                  <CheckCircle className="w-4 h-4" /> Complete
+                                </button>
+                              )}
+                              {booking.status === "no_show" && (
+                                <button
+                                  onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
+                                  disabled={undoNoShowMutation.isPending}
+                                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                >
+                                  Undo No-show
+                                </button>
+                              )}
+                              {booking.status === "completed" && (
+                                <span className="text-xs text-green-600 font-bold flex items-center gap-1">
+                                  <CheckCircle className="w-3.5 h-3.5" /> Done
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {activeSection === "services" && (
@@ -796,6 +919,48 @@ export default function Dashboard() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="mt-6 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                  <h3 className="font-semibold text-slate-900 text-sm mb-4">Add New Service</h3>
+                  <form onSubmit={async (e: any) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const name = form.serviceName.value;
+                    const price = Number(form.price.value);
+                    const durationMinutes = Number(form.duration.value);
+                    if (name && price > 0 && durationMinutes > 0) {
+                      try {
+                        await fetch(`/api/shops/${slug}/services`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                          body: JSON.stringify({ name, price, durationMinutes })
+                        });
+                        form.reset();
+                        refetchShopProfile();
+                      } catch (err) {
+                        alert("Failed to add service");
+                      }
+                    }
+                  }} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Service Name</label>
+                      <input name="serviceName" required className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Haircut" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Price (₹)</label>
+                      <input name="price" type="number" required min="1" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Duration (min)</label>
+                      <input name="duration" type="number" required min="5" step="5" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="30" />
+                    </div>
+                    <div className="md:col-span-4 flex justify-end mt-2">
+                      <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-semibold text-sm rounded-lg hover:bg-blue-700 transition-colors">
+                        Add Service
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}
@@ -878,7 +1043,7 @@ export default function Dashboard() {
                           profilePath !== undefined
                             ? (profilePath ? [profilePath] : [])
                             : (shopProfile?.shop as any)?.profilePhoto
-                            ? [(shopProfile.shop as any).profilePhoto]
+                            ? [(shopProfile?.shop as any).profilePhoto]
                             : []
                         }
                         onUploaded={async (paths) => {
@@ -1072,87 +1237,6 @@ export default function Dashboard() {
 
               </div>
             )}
-              </div>
-
-              {/* Right panel: activity + revenue */}
-              <div className="space-y-5">
-                {/* Revenue chart */}
-                {revenue && revenue.length > 0 && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <h3 className="font-semibold text-slate-900 text-sm mb-4">7-Day Revenue</h3>
-                    <ResponsiveContainer width="100%" height={120}>
-                      <BarChart data={revenueData} barSize={16}>
-                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                        <YAxis hide />
-                        <Tooltip
-                          contentStyle={{ fontSize: 11, border: "1px solid #e2e8f0", borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}
-                          formatter={(val: any) => [`₹${val}`, "Revenue"]}
-                        />
-                        <Bar dataKey="revenue" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {/* Recent Activity */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
-                  <div className="px-5 py-3 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-900 text-sm">Recent Activity</h3>
-                  </div>
-                  <div className="divide-y divide-slate-50">
-                    {!activity || activity.length === 0 ? (
-                      <div className="p-5 text-center text-slate-400 text-sm">No activity yet</div>
-                    ) : (
-                      activity.map((item) => {
-                        const colors: Record<string, string> = {
-                          new_booking: "bg-blue-100 text-blue-600",
-                          arrival: "bg-green-100 text-green-600",
-                          no_show: "bg-red-100 text-red-500",
-                          completed: "bg-slate-100 text-slate-500",
-                          cancelled: "bg-slate-100 text-slate-400",
-                        };
-                        const icons: Record<string, React.ReactNode> = {
-                          new_booking: <Clock className="w-3 h-3" />,
-                          arrival: <CheckCircle className="w-3 h-3" />,
-                          no_show: <AlertTriangle className="w-3 h-3" />,
-                          completed: <CheckCircle className="w-3 h-3" />,
-                          cancelled: <XCircle className="w-3 h-3" />,
-                        };
-                        return (
-                          <div key={item.id} className="px-5 py-3 flex items-start gap-3">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${colors[item.type] ?? "bg-slate-100 text-slate-500"}`}>
-                              {icons[item.type]}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-900 truncate">{item.customerName}</p>
-                              <p className="text-xs text-slate-400 truncate">{item.serviceName} · {item.slotTime}</p>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Stats */}
-                {dashboard && (
-                  <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                    <h3 className="font-semibold text-slate-900 text-sm mb-3">Today's Summary</h3>
-                    <div className="space-y-2">
-                      {[
-                        { label: "Completed", value: dashboard.completedToday, color: "text-green-600" },
-                        { label: "No-shows", value: dashboard.noShowsToday, color: "text-red-500" },
-                        { label: "Weekly Bookings", value: dashboard.weeklyBookings, color: "text-blue-600" },
-                        { label: "Weekly Revenue", value: `₹${dashboard.weeklyRevenue}`, color: "text-blue-700" },
-                      ].map(({ label, value, color }) => (
-                        <div key={label} className="flex items-center justify-between py-1">
-                          <span className="text-xs text-slate-500">{label}</span>
-                          <span className={`text-sm font-bold ${color}`}>{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
         </div>
       </div>

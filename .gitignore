@@ -47,3 +47,15 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Environment variables (secrets)
+.env
+.env.*
+*.env
+
+# Uploaded files (local storage)
+artifacts/api-server/uploads/
+
+# Test scripts
+artifacts/api-server/test-*.mjs
+artifacts/api-server/inspect-db.mjs

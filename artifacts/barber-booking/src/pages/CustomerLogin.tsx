@@ -17,7 +17,7 @@ export default function CustomerLogin() {
 
   const sendOtpMutation = useSendOtp({
     mutation: {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         if (data.otp) setDemoOtp(data.otp);
         setStep("otp");
         setError("");
@@ -28,8 +28,8 @@ export default function CustomerLogin() {
 
   const verifyOtpMutation = useVerifyOtp({
     mutation: {
-      onSuccess: () => {
-        loginCustomer(phone);
+      onSuccess: (data: any) => {
+        loginCustomer(phone, data.token);
         navigate("/customer");
       },
       onError: () => setError("Wrong OTP. Please try again."),
@@ -60,7 +60,7 @@ export default function CustomerLogin() {
           <Scissors className="w-8 h-8 text-slate-900" />
         </div>
         <h1 className="text-3xl font-black text-white tracking-tight">eNai</h1>
-        <p className="text-slate-400 text-sm mt-1">Customer Sign In</p>
+        <p className="text-slate-400 text-sm mt-1">Customer Login / Sign up</p>
       </div>
 
       {/* Card */}
@@ -74,8 +74,8 @@ export default function CustomerLogin() {
 
         {step === "phone" && (
           <>
-            <h2 className="text-2xl font-black text-slate-900 mb-1">Enter your number</h2>
-            <p className="text-slate-400 text-sm mb-8">We'll send a 4-digit OTP to verify you</p>
+            <h2 className="text-2xl font-black text-slate-900 mb-1">Login / Sign up</h2>
+            <p className="text-slate-400 text-sm mb-8">We'll send a 6-digit OTP to verify you</p>
 
             {error && (
               <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
@@ -137,23 +137,23 @@ export default function CustomerLogin() {
             <form onSubmit={handleVerify} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  4-Digit OTP
+                  6-Digit OTP
                 </label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  maxLength={4}
-                  placeholder="· · · ·"
+                  maxLength={6}
+                  placeholder="· · · · · ·"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  className="w-full px-6 py-5 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-black text-4xl text-center focus:outline-none focus:border-blue-600 tracking-[0.5em]"
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="w-full px-6 py-5 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-black text-4xl text-center focus:outline-none focus:border-blue-600 tracking-[0.3em]"
                   autoFocus
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={otp.length !== 4 || verifyOtpMutation.isPending}
+                disabled={otp.length !== 6 || verifyOtpMutation.isPending}
                 className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {verifyOtpMutation.isPending ? "Verifying…" : "Verify & Continue →"}

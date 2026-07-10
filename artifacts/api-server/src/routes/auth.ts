@@ -1,8 +1,17 @@
 import { Router } from "express";
-import { db, shopsTable, otpSessionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { hashPassword, verifyPassword, generateToken, generateOtp, slugify } from "../lib/auth";
+import { db, shopsTable, ownersTable, otpSessionsTable } from "@workspace/db";
+import { eq, lt } from "drizzle-orm";
+import { hashPassword, verifyPassword, generateToken, generateOtp, slugify, revokeToken } from "../lib/auth";
 import { RegisterBarberBody, LoginBarberBody, SendOtpBody, VerifyOtpBody } from "@workspace/api-zod";
+import rateLimit from "express-rate-limit";
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." }
+});
 
 
 const router = Router();
@@ -17,58 +26,62 @@ router.post("/auth/register", async (req, res) => {
   }
   const data = parsed.data;
 
-  // Check phone uniqueness
-  const existing = await db.select().from(shopsTable).where(eq(shopsTable.phone, data.phone));
-  if (existing.length > 0) {
+  // Check phone uniqueness in ownersTable
+  const existingOwner = await db.select().from(ownersTable).where(eq(ownersTable.phone, data.phone));
+  if (existingOwner.length > 0) {
     return res.status(409).json({ error: "Phone number already registered" });
   }
 
-  // Generate unique slug
-  let baseSlug = slugify(data.shopName);
-  let slug = baseSlug;
-  let suffix = 1;
-  while (true) {
-    const slugCheck = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
-    if (slugCheck.length === 0) break;
-    slug = `${baseSlug}-${suffix++}`;
+  // Verify OTP
+  const sessions = await db
+    .select()
+    .from(otpSessionsTable)
+    .where(eq(otpSessionsTable.phone, data.phone));
+
+  const validOtp = sessions.find(
+    (s) => s.otp === data.otp && !s.verified && s.expiresAt > new Date()
+  );
+
+  if (!validOtp) {
+    // Delete session on failed attempt to prevent brute force
+    await db.delete(otpSessionsTable).where(eq(otpSessionsTable.phone, data.phone));
+    return res.status(400).json({ error: "Invalid or expired OTP" });
   }
 
+  // OTP verified, consume it
+  await db.delete(otpSessionsTable).where(eq(otpSessionsTable.phone, data.phone));
+
   const passwordHash = hashPassword(data.password);
-  const [shop] = await db
-    .insert(shopsTable)
-    .values({
-      slug,
-      shopName: data.shopName,
-      ownerName: data.ownerName,
-      phone: data.phone,
-      passwordHash,
-      city: data.city,
-      address: data.address ?? null,
-      numChairs: data.numChairs,
-      numBarbers: data.numBarbers,
-      openTime: data.openTime ?? "09:00",
-      closeTime: data.closeTime ?? "20:00",
-      pincode: (data as any).pincode ?? null,
-      latitude: (data as any).latitude ?? null,
-      longitude: (data as any).longitude ?? null,
-    })
-    .returning();
+  try {
+    const [owner] = await db
+      .insert(ownersTable)
+      .values({
+        phone: data.phone,
+        passwordHash,
+        name: data.ownerName,
+      })
+      .returning();
 
-  const token = generateToken({ shopId: shop.id, slug: shop.slug });
-  const { passwordHash: _, ...shopSafe } = shop;
-
-  return res.status(201).json({
-    token,
-    shop: {
-      ...shopSafe,
-      createdAt: shopSafe.createdAt.toISOString(),
-      pausedUntil: shopSafe.pausedUntil?.toISOString() ?? null,
-    },
-  });
+    const token = generateToken({ ownerId: owner.id }); // no shopId yet
+    
+    const { passwordHash: _, ...ownerSafe } = owner;
+    
+    return res.status(201).json({ 
+      token, 
+      owner: {
+        ...ownerSafe,
+        createdAt: ownerSafe.createdAt.toISOString()
+      }, 
+      shop: null
+    });
+  } catch (error: any) {
+    req.log.error(error);
+    return res.status(500).json({ error: "Registration failed" });
+  }
 });
 
 // POST /auth/login
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", authLimiter, async (req, res) => {
   const parsed = LoginBarberBody.safeParse(req.body);
   if (!parsed.success) {
     const field = parsed.error.errors[0]?.path.join(".");
@@ -77,30 +90,49 @@ router.post("/auth/login", async (req, res) => {
   }
   const { phone, password } = parsed.data;
 
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.phone, phone));
-  if (shops.length === 0) {
+  const owners = await db.select().from(ownersTable).where(eq(ownersTable.phone, phone));
+  if (owners.length === 0) {
     return res.status(401).json({ error: "Invalid phone or password" });
   }
-  const shop = shops[0];
-  if (!verifyPassword(password, shop.passwordHash)) {
+  const owner = owners[0];
+  if (!verifyPassword(password, owner.passwordHash)) {
     return res.status(401).json({ error: "Invalid phone or password" });
   }
 
-  const token = generateToken({ shopId: shop.id, slug: shop.slug });
-  const { passwordHash: _, ...shopSafe } = shop;
+  // Get the first shop
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.ownerId, owner.id));
+  const shop = shops[0];
+
+  const token = generateToken({ ownerId: owner.id, shopId: shop?.id, slug: shop?.slug });
+  const { passwordHash: _, ...ownerSafe } = owner;
 
   return res.json({
     token,
-    shop: {
-      ...shopSafe,
-      createdAt: shopSafe.createdAt.toISOString(),
-      pausedUntil: shopSafe.pausedUntil?.toISOString() ?? null,
+    owner: {
+      ...ownerSafe,
+      createdAt: ownerSafe.createdAt.toISOString()
     },
+    shop: shop ? {
+      id: shop.id,
+      slug: shop.slug,
+      shopName: shop.shopName,
+      city: shop.city,
+      address: shop.address,
+      numChairs: shop.numChairs,
+      numBarbers: shop.numBarbers,
+      openTime: shop.openTime,
+      closeTime: shop.closeTime,
+      isOpen: shop.isOpen,
+      isVerified: shop.isVerified,
+      isPaused: shop.isPaused,
+      createdAt: shop.createdAt.toISOString(),
+      pausedUntil: shop.pausedUntil?.toISOString() ?? null,
+    } : null,
   });
 });
 
 // POST /auth/send-otp
-router.post("/auth/send-otp", async (req, res) => {
+router.post("/auth/send-otp", authLimiter, async (req, res) => {
   const parsed = SendOtpBody.safeParse(req.body);
   if (!parsed.success) {
     const field = parsed.error.errors[0]?.path.join(".");
@@ -111,7 +143,12 @@ router.post("/auth/send-otp", async (req, res) => {
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
-  // Upsert OTP session
+  // Delete old OTP sessions for this phone
+  await db.delete(otpSessionsTable).where(eq(otpSessionsTable.phone, phone));
+  // Globally clean up all expired OTP sessions (Fix #15)
+  await db.delete(otpSessionsTable).where(lt(otpSessionsTable.expiresAt, new Date()));
+
+  // Insert new OTP session
   await db.insert(otpSessionsTable).values({
     phone,
     otp,
@@ -120,7 +157,7 @@ router.post("/auth/send-otp", async (req, res) => {
   });
 
   // In production: send via WhatsApp. For now, log it.
-  console.log(`[OTP] Phone: ${phone}, OTP: ${otp}`);
+  req.log.info({ phone }, "OTP generated for phone");
 
   return res.json({ success: true, message: "OTP sent to your WhatsApp", otp }); // Return OTP in demo
 });
@@ -141,10 +178,12 @@ router.post("/auth/verify-otp", async (req, res) => {
     .where(eq(otpSessionsTable.phone, phone));
 
   const valid = sessions.find(
-    (s) => (s.otp === otp || otp === "1234") && !s.verified && s.expiresAt > new Date()
+    (s) => s.otp === otp && !s.verified && s.expiresAt > new Date()
   );
 
   if (!valid) {
+    // Delete session on failed attempt to prevent brute force (Fix #9)
+    await db.delete(otpSessionsTable).where(eq(otpSessionsTable.phone, phone));
     return res.status(400).json({ error: "Invalid or expired OTP" });
   }
 
@@ -156,6 +195,18 @@ router.post("/auth/verify-otp", async (req, res) => {
 
   const token = generateToken({ phone, verified: true });
   return res.json({ verified: true, token });
+});
+
+// POST /auth/logout
+router.post("/auth/logout", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    if (token) {
+      revokeToken(token);
+    }
+  }
+  return res.json({ success: true });
 });
 
 export default router;

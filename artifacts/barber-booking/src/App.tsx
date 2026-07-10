@@ -12,9 +12,33 @@ import CustomerHome from "@/pages/CustomerHome";
 import CustomerBookings from "@/pages/CustomerBookings";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import CreateShop from "@/pages/CreateShop";
 import ShopPage from "@/pages/ShopPage";
 import Dashboard from "@/pages/Dashboard";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
+
+setAuthTokenGetter(() => {
+  const path = window.location.pathname;
+  // Customer-facing pages: customer login, customer home, and shop booking pages
+  if (path.startsWith("/customer") || path === "/customer-login" || path.startsWith("/shop/")) {
+    const token = localStorage.getItem("customer_token");
+    if (token) {
+      // Check if token is expired
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (payload.exp && payload.exp < Date.now()) {
+          localStorage.removeItem("customer_token");
+          localStorage.removeItem("customer_phone");
+          return null;
+        }
+      } catch { /* ignore parse errors */ }
+    }
+    return token;
+  }
+  return localStorage.getItem("barber_token");
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,8 +57,10 @@ function Router() {
       <Route path="/customer" component={CustomerHome} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/create-shop" component={CreateShop} />
       <Route path="/shop/:slug" component={ShopPage} />
       <Route path="/dashboard/:slug" component={Dashboard} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

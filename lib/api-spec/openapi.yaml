@@ -137,6 +137,35 @@ paths:
 
   # ── SHOPS ─────────────────────────────────────────────────────────────
   /shops:
+    post:
+      operationId: createShop
+      tags: [shops]
+      summary: Create a shop for the authenticated owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShopCreateInput"
+      responses:
+        "201":
+          description: Shop created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shop"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Shop slug already taken or owner already has a shop
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       operationId: listShops
       tags: [shops]
@@ -586,6 +615,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: weeksAgo
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
       responses:
         "200":
           description: Revenue stats
@@ -616,15 +651,57 @@ components:
     # Auth
     BarberRegistrationInput:
       type: object
-      required: [ownerName, shopName, phone, password, numChairs, numBarbers, city]
+      required: [ownerName, phone, password, otp]
       properties:
         ownerName:
-          type: string
-        shopName:
           type: string
         phone:
           type: string
         password:
+          type: string
+        otp:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [phone, password]
+      properties:
+        phone:
+          type: string
+        password:
+          type: string
+
+    Owner:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        createdAt:
+          type: string
+      required: [id, name, phone, createdAt]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        owner:
+          $ref: "#/components/schemas/Owner"
+        shop:
+          oneOf:
+            - $ref: "#/components/schemas/Shop"
+            - type: "null"
+      required: [token, owner]
+
+    ShopCreateInput:
+      type: object
+      required: [shopName, numChairs, numBarbers, city]
+      properties:
+        shopName:
           type: string
         numChairs:
           type: integer
@@ -648,24 +725,6 @@ components:
           type: string
         longitude:
           type: string
-
-    LoginInput:
-      type: object
-      required: [phone, password]
-      properties:
-        phone:
-          type: string
-        password:
-          type: string
-
-    AuthResponse:
-      type: object
-      properties:
-        token:
-          type: string
-        shop:
-          $ref: "#/components/schemas/Shop"
-      required: [token, shop]
 
     SendOtpInput:
       type: object
@@ -717,8 +776,16 @@ components:
           type: string
         city:
           type: string
+        pincode:
+          type: ["string", "null"]
         address:
           type: ["string", "null"]
+        profilePhoto:
+          type: ["string", "null"]
+        interiorPhotos:
+          type: array
+          items:
+            type: string
         numChairs:
           type: integer
         numBarbers:
@@ -764,6 +831,8 @@ components:
           type: ["string", "null"]
         longitude:
           type: ["string", "null"]
+        profilePhoto:
+          type: ["string", "null"]
       required: [id, slug, shopName, ownerName, city, isOpen, isPaused, numChairs, servicesCount]
 
     ShopProfile:
@@ -800,6 +869,10 @@ components:
     ShopSettingsInput:
       type: object
       properties:
+        ownerName:
+          type: string
+        phone:
+          type: string
         shopName:
           type: string
         numChairs:
@@ -813,6 +886,8 @@ components:
         city:
           type: string
         address:
+          type: string
+        pincode:
           type: string
 
     DashboardSummary:
@@ -964,6 +1039,12 @@ components:
           type: ["string", "null"]
         service:
           $ref: "#/components/schemas/Service"
+        shopName:
+          type: string
+        shopCity:
+          type: string
+        serviceName:
+          type: string
         createdAt:
           type: string
       required: [id, shopId, serviceId, customerName, customerPhone, slotDate, slotTime, slotEndTime, chairNumber, status, paymentType, amountPaid, totalAmount, createdAt]

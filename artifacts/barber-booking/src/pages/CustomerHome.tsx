@@ -6,7 +6,8 @@ import { Search, MapPin, Users, Scissors, Star, LogOut, Calendar, Clock, Navigat
 import CustomerOnboarding, { getCustomerProfile, saveCustomerProfile, type CustomerProfile } from "@/components/CustomerOnboarding";
 import ImageUpload, { photoUrl } from "@/components/ImageUpload";
 
-type Shop = NonNullable<ReturnType<typeof useListShops>["data"]>[number];
+import { type ShopSummary } from "@workspace/api-client-react";
+type Shop = ShopSummary;
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -146,16 +147,17 @@ export default function CustomerHome() {
   }, [profile]);
 
   useEffect(() => {
-    if (!phone) navigate("/customer-login");
+    if (!phone) navigate("/");
   }, [phone, navigate]);
 
   useEffect(() => {
-    if (!phone) return;
+    if (!phone) return undefined;
     const p = getCustomerProfile(phone);
     if (!p) {
       const timer = setTimeout(() => setShowOnboarding(true), 400);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [phone]);
 
   useEffect(() => {
@@ -171,12 +173,27 @@ export default function CustomerHome() {
   }, []);
 
   // --- Queries ---
-  const { data: allShops = [], isLoading: shopsLoading } = useListShops({}, { query: { enabled: true } });
-  const { data: searchResults, isLoading: searchLoading } = useListShops({ q: submitted }, { query: { enabled: !!submitted } });
+  const { data: allShops = [], isLoading: shopsLoading } = useListShops({}, { query: { enabled: true } as any });
+  const { data: searchResults, isLoading: searchLoading } = useListShops({ q: submitted }, { query: { enabled: !!submitted } as any });
   
   const { data: bookings = [], isLoading: bookingsLoading, refetch: refetchBookings } = useGetAllCustomerBookings(phone ?? "", {
-    query: { enabled: !!phone },
+    query: { enabled: !!phone } as any,
   });
+
+  useEffect(() => {
+    if (bookings.length > 0 && !profile && phone) {
+      // Recover profile from latest booking (new device login)
+      const recent = bookings.reduce((latest: any, b: any) => 
+        new Date(b.createdAt) > new Date(latest.createdAt) ? b : latest
+      , bookings[0]);
+      
+      const newProfile: CustomerProfile = { name: recent.customerName, gender: "", age: "" };
+      saveCustomerProfile(phone, newProfile);
+      setProfile(newProfile);
+      setEditProfile(newProfile);
+      setShowOnboarding(false);
+    }
+  }, [bookings, profile, phone]);
 
   const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
   const cancelMutation = useCancelCustomerBooking({
@@ -337,7 +354,7 @@ export default function CustomerHome() {
                 
                 <div className="mt-auto pt-8">
                   <button 
-                    onClick={() => { logoutCustomer(); navigate("/customer-login"); }} 
+                    onClick={() => { logoutCustomer(); navigate("/"); }} 
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                   >
                     <LogOut className="w-4 h-4"/> Sign Out
@@ -602,7 +619,7 @@ export default function CustomerHome() {
             <div className="flex flex-col gap-3">
               <button
                 disabled={cancelMutation.isPending}
-                onClick={() => cancelMutation.mutate({ bookingId: confirmCancel, phone })}
+                onClick={() => cancelMutation.mutate({ bookingId: confirmCancel })}
                 className="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-sm hover:bg-red-500 transition-colors disabled:opacity-60 shadow-lg shadow-red-600/20"
               >
                 {cancelMutation.isPending ? "Cancelling…" : "Yes, Cancel Booking"}

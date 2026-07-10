@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { db, shopsTable, servicesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
+import { CreateServiceBody, UpdateServiceBody } from "@workspace/api-zod";
 
 const router = Router();
 
@@ -18,16 +20,18 @@ router.get("/shops/:slug/services", async (req, res) => {
   return res.json(services);
 });
 
-// POST /shops/:slug/services
-router.post("/shops/:slug/services", async (req, res) => {
+// POST /shops/:slug/services (owner only)
+router.post("/shops/:slug/services", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const { slug } = req.params;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { name, price, durationMinutes } = req.body;
-  if (!name || price === undefined || !durationMinutes) {
-    return res.status(400).json({ error: "name, price, durationMinutes required" });
+  const parsed = CreateServiceBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input: " + parsed.error.errors[0]?.message });
   }
+  const { name, price, durationMinutes } = parsed.data;
 
   const [service] = await db
     .insert(servicesTable)
@@ -37,13 +41,18 @@ router.post("/shops/:slug/services", async (req, res) => {
   return res.status(201).json(service);
 });
 
-// PATCH /shops/:slug/services/:serviceId
-router.patch("/shops/:slug/services/:serviceId", async (req, res) => {
+// PATCH /shops/:slug/services/:serviceId (owner only)
+router.patch("/shops/:slug/services/:serviceId", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const { slug, serviceId } = req.params;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { name, price, durationMinutes, isActive } = req.body;
+  const parsed = UpdateServiceBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input: " + parsed.error.errors[0]?.message });
+  }
+  const { name, price, durationMinutes, isActive } = parsed.data;
   const update: Record<string, unknown> = {};
   if (name !== undefined) update.name = name;
   if (price !== undefined) update.price = price;
@@ -65,11 +74,12 @@ router.patch("/shops/:slug/services/:serviceId", async (req, res) => {
   return res.json(updated);
 });
 
-// DELETE /shops/:slug/services/:serviceId
-router.delete("/shops/:slug/services/:serviceId", async (req, res) => {
+// DELETE /shops/:slug/services/:serviceId (owner only)
+router.delete("/shops/:slug/services/:serviceId", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const { slug, serviceId } = req.params;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   await db
     .delete(servicesTable)

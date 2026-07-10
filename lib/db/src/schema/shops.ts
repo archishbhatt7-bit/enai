@@ -1,20 +1,20 @@
 import { pgTable, serial, text, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { ownersTable } from "./owners";
 
 export const shopsTable = pgTable("shops", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   shopName: text("shop_name").notNull(),
-  ownerName: text("owner_name").notNull(),
-  phone: text("phone").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  ownerId: integer("owner_id").notNull().references(() => ownersTable.id, { onDelete: "cascade" }),
   city: text("city").notNull(),
   address: text("address"),
   numChairs: integer("num_chairs").notNull().default(1),
   numBarbers: integer("num_barbers").notNull().default(1),
   isOpen: boolean("is_open").notNull().default(true),
   isPaused: boolean("is_paused").notNull().default(false),
+  isVerified: boolean("is_verified").notNull().default(false),
   pausedUntil: timestamp("paused_until"),
   openTime: text("open_time").notNull().default("09:00"),
   closeTime: text("close_time").notNull().default("20:00"),

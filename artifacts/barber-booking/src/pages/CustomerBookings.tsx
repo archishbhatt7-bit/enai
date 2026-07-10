@@ -30,7 +30,7 @@ export default function CustomerBookings() {
   const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
 
   const { data: bookings = [], isLoading, refetch } = useGetAllCustomerBookings(phone ?? "", {
-    query: { enabled: !!phone },
+    query: { enabled: !!phone } as any,
   });
 
   const cancelMutation = useCancelCustomerBooking({
@@ -197,7 +197,7 @@ export default function CustomerBookings() {
               </button>
               <button
                 disabled={cancelMutation.isPending}
-                onClick={() => cancelMutation.mutate({ bookingId: confirmCancel, phone })}
+                onClick={() => cancelMutation.mutate({ bookingId: confirmCancel })}
                 className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-60"
               >
                 {cancelMutation.isPending ? "Cancelling…" : "Yes, Cancel"}

@@ -1,16 +1,18 @@
 import { Router } from "express";
 import { db, shopsTable, servicesTable, bookingsTable } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, gte } from "drizzle-orm";
 import { getAvailableSlots, assignChair, addMinutes } from "../lib/slots";
 import { generateOtp } from "../lib/auth";
+import { requireOwnerAuth, OwnerAuthRequest, requireCustomerAuth, CustomerAuthRequest } from "../middleware/auth";
 
 const router = Router();
 
 const BUFFER_MINUTES = 10;
 
 function serializeBooking(b: typeof bookingsTable.$inferSelect, service?: typeof servicesTable.$inferSelect) {
+  const { arrivalOtp: _otp, ...rest } = b;
   return {
-    ...b,
+    ...rest,
     createdAt: b.createdAt.toISOString(),
     service: service ?? null,
   };
@@ -18,7 +20,9 @@ function serializeBooking(b: typeof bookingsTable.$inferSelect, service?: typeof
 
 // GET /shops/:slug/slots/:date/:serviceId
 router.get("/shops/:slug/slots/:date/:serviceId", async (req, res) => {
-  const { slug, date, serviceId } = req.params;
+  const slug = req.params.slug as string;
+  const date = req.params.date as string;
+  const serviceId = req.params.serviceId as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
@@ -56,10 +60,12 @@ router.get("/shops/:slug/slots/:date/:serviceId", async (req, res) => {
 });
 
 // GET /shops/:slug/bookings
-router.get("/shops/:slug/bookings", async (req, res) => {
-  const { slug } = req.params;
+router.get("/shops/:slug/bookings", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const today = new Date().toISOString().split("T")[0];
   const rawBookings = await db
@@ -75,8 +81,8 @@ router.get("/shops/:slug/bookings", async (req, res) => {
 });
 
 // POST /shops/:slug/bookings
-router.post("/shops/:slug/bookings", async (req, res) => {
-  const { slug } = req.params;
+router.post("/shops/:slug/bookings", requireCustomerAuth, async (req: CustomerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
@@ -86,9 +92,22 @@ router.post("/shops/:slug/bookings", async (req, res) => {
     return res.status(400).json({ error: "Bookings are paused" });
   }
 
-  const { customerName, customerPhone, serviceId, slotDate, slotTime, paymentType } = req.body;
-  if (!customerName || !customerPhone || !serviceId || !slotDate || !slotTime || !paymentType) {
-    return res.status(400).json({ error: "Missing required fields" });
+  const { customerName, serviceId, slotDate, slotTime, paymentType } = req.body;
+  const customerPhone = req.customerPhone!;
+  if (!customerName || typeof customerName !== "string") {
+    return res.status(400).json({ error: "customerName is required" });
+  }
+  if (!serviceId || typeof serviceId !== "number") {
+    return res.status(400).json({ error: "serviceId is required and must be a number" });
+  }
+  if (!slotDate || typeof slotDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(slotDate)) {
+    return res.status(400).json({ error: "slotDate is required in YYYY-MM-DD format" });
+  }
+  if (!slotTime || typeof slotTime !== "string" || !/^\d{2}:\d{2}$/.test(slotTime)) {
+    return res.status(400).json({ error: "slotTime is required in HH:MM format" });
+  }
+  if (!paymentType || !["token", "full"].includes(paymentType)) {
+    return res.status(400).json({ error: "paymentType must be 'token' or 'full'" });
   }
 
   const services = await db
@@ -99,9 +118,19 @@ router.post("/shops/:slug/bookings", async (req, res) => {
   if (services.length === 0) return res.status(400).json({ error: "Service not found" });
   const service = services[0];
 
-  // Check advance booking rule (2 hours in advance)
+  // Validate booking date range
   const now = new Date();
   const today = now.toISOString().split("T")[0];
+  if (slotDate < today) {
+    return res.status(400).json({ error: "Cannot book for past dates" });
+  }
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 30);
+  if (slotDate > maxDate.toISOString().split("T")[0]) {
+    return res.status(400).json({ error: "Cannot book more than 30 days in advance" });
+  }
+
+  // Check advance booking rule (2 hours in advance for same-day)
   if (slotDate === today) {
     const [h, m] = slotTime.split(":").map(Number);
     const slotMinutes = h * 60 + m;
@@ -114,46 +143,86 @@ router.post("/shops/:slug/bookings", async (req, res) => {
   const totalDuration = service.durationMinutes + BUFFER_MINUTES;
   const slotEndTime = addMinutes(slotTime, totalDuration);
 
-  // Assign a chair
-  const chairNumber = await assignChair(shop.id, shop.numChairs, slotDate, slotTime, slotEndTime);
-  if (chairNumber === null) {
-    return res.status(409).json({ error: "No chairs available for this slot" });
+  // Resource exhaustion checks (Fix #25)
+  const upcomingBookings = await db
+    .select()
+    .from(bookingsTable)
+    .where(
+      and(
+        eq(bookingsTable.customerPhone, customerPhone),
+        inArray(bookingsTable.status, ["pending", "confirmed"]),
+        gte(bookingsTable.slotDate, today)
+      )
+    );
+
+  if (upcomingBookings.length >= 3) {
+    return res.status(403).json({ error: "You have reached the global maximum limit of 3 upcoming bookings." });
+  }
+
+  const sameDayShopBookings = upcomingBookings.filter(b => b.shopId === shop.id && b.slotDate === slotDate);
+  if (sameDayShopBookings.length >= 2) {
+    return res.status(403).json({ error: "Maximum of 2 bookings per day per shop allowed." });
+  }
+
+  // Check for overlaps with sameDayShopBookings
+  for (const b of sameDayShopBookings) {
+    if (slotTime < b.slotEndTime && slotEndTime > b.slotTime) {
+      return res.status(409).json({ error: "You already have an overlapping booking at this time." });
+    }
   }
 
   const amountPaid = paymentType === "full" ? service.price : 1;
   const arrivalOtp = generateOtp();
 
-  const [booking] = await db
-    .insert(bookingsTable)
-    .values({
-      shopId: shop.id,
-      serviceId: service.id,
-      customerName,
-      customerPhone,
-      slotDate,
-      slotTime,
-      slotEndTime,
-      chairNumber,
-      status: "confirmed",
-      paymentType,
-      amountPaid,
-      totalAmount: service.price,
-      arrivalOtp,
-    })
-    .returning();
+  try {
+    const [booking] = await db.transaction(async (tx) => {
+      const chairNumber = await assignChair(tx, shop.id, shop.numChairs, slotDate, slotTime, slotEndTime);
+      if (chairNumber === null) {
+        throw new Error("NO_CHAIRS_AVAILABLE");
+      }
 
-  console.log(`[Booking OTP] Customer: ${customerName}, Phone: ${customerPhone}, OTP: ${arrivalOtp}`);
+      return tx
+        .insert(bookingsTable)
+        .values({
+          shopId: shop.id,
+          serviceId: service.id,
+          customerName,
+          customerPhone,
+          slotDate,
+          slotTime,
+          slotEndTime,
+          chairNumber,
+          status: "confirmed",
+          paymentType,
+          amountPaid,
+          totalAmount: service.price,
+          arrivalOtp,
+        })
+        .returning();
+    });
 
-  return res.status(201).json(serializeBooking(booking, service));
+    req.log.info({ bookingId: booking.id, customerPhone }, "Booking created");
+    const serialized = serializeBooking(booking, service);
+    // Include the arrivalOtp in the creation response so the customer can see it
+    return res.status(201).json({ ...serialized, arrivalOtp });
+  } catch (err: any) {
+    if (err.message === "NO_CHAIRS_AVAILABLE") {
+      return res.status(409).json({ error: "No chairs available for this slot" });
+    }
+    throw err;
+  }
 });
 
 // POST /shops/:slug/bookings/:bookingId/verify-otp
-router.post("/shops/:slug/bookings/:bookingId/verify-otp", async (req, res) => {
-  const { slug, bookingId } = req.params;
+router.post("/shops/:slug/bookings/:bookingId/verify-otp", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
+  const bookingId = req.params.bookingId as string;
   const { otp } = req.body;
 
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const bookings = await db
     .select()
@@ -163,7 +232,7 @@ router.post("/shops/:slug/bookings/:bookingId/verify-otp", async (req, res) => {
   if (bookings.length === 0) return res.status(404).json({ error: "Booking not found" });
   const booking = bookings[0];
 
-  if (booking.arrivalOtp !== otp && otp !== "1234") {
+  if (booking.arrivalOtp !== otp) {
     return res.status(400).json({ error: "Invalid OTP" });
   }
 
@@ -178,10 +247,13 @@ router.post("/shops/:slug/bookings/:bookingId/verify-otp", async (req, res) => {
 });
 
 // POST /shops/:slug/bookings/:bookingId/no-show
-router.post("/shops/:slug/bookings/:bookingId/no-show", async (req, res) => {
-  const { slug, bookingId } = req.params;
+router.post("/shops/:slug/bookings/:bookingId/no-show", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
+  const bookingId = req.params.bookingId as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const [updated] = await db
     .update(bookingsTable)
@@ -195,10 +267,13 @@ router.post("/shops/:slug/bookings/:bookingId/no-show", async (req, res) => {
 });
 
 // POST /shops/:slug/bookings/:bookingId/undo-no-show
-router.post("/shops/:slug/bookings/:bookingId/undo-no-show", async (req, res) => {
-  const { slug, bookingId } = req.params;
+router.post("/shops/:slug/bookings/:bookingId/undo-no-show", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
+  const bookingId = req.params.bookingId as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const [updated] = await db
     .update(bookingsTable)
@@ -212,10 +287,13 @@ router.post("/shops/:slug/bookings/:bookingId/undo-no-show", async (req, res) =>
 });
 
 // POST /shops/:slug/bookings/:bookingId/complete
-router.post("/shops/:slug/bookings/:bookingId/complete", async (req, res) => {
-  const { slug, bookingId } = req.params;
+router.post("/shops/:slug/bookings/:bookingId/complete", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
+  const bookingId = req.params.bookingId as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const [updated] = await db
     .update(bookingsTable)
@@ -229,11 +307,13 @@ router.post("/shops/:slug/bookings/:bookingId/complete", async (req, res) => {
 });
 
 // GET /shops/:slug/timeline/:date
-router.get("/shops/:slug/timeline/:date", async (req, res) => {
-  const { slug, date } = req.params;
+router.get("/shops/:slug/timeline/:date", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
+  const date = req.params.date as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const rawBookings = await db
     .select()
@@ -260,10 +340,11 @@ router.get("/shops/:slug/timeline/:date", async (req, res) => {
 });
 
 // GET /shops/:slug/activity
-router.get("/shops/:slug/activity", async (req, res) => {
-  const { slug } = req.params;
+router.get("/shops/:slug/activity", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const rawBookings = await db
     .select()
@@ -300,25 +381,29 @@ router.get("/shops/:slug/activity", async (req, res) => {
 });
 
 // GET /shops/:slug/revenue
-router.get("/shops/:slug/revenue", async (req, res) => {
-  const { slug } = req.params;
+router.get("/shops/:slug/revenue", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const allBookings = await db
     .select()
     .from(bookingsTable)
     .where(eq(bookingsTable.shopId, shops[0].id));
 
+  const weeksAgoStr = req.query.weeksAgo as string;
+  const weeksAgo = parseInt(weeksAgoStr) || 0;
+
   const result: Array<{ date: string; bookings: number; revenue: number }> = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
-    d.setDate(d.getDate() - i);
+    d.setDate(d.getDate() - i - (weeksAgo * 7));
     const dateStr = d.toISOString().split("T")[0];
     const dayBookings = allBookings.filter(
       (b) =>
         b.slotDate === dateStr &&
-        ["confirmed", "active", "completed"].includes(b.status)
+        b.status === "completed"
     );
     result.push({
       date: dateStr,
@@ -330,10 +415,11 @@ router.get("/shops/:slug/revenue", async (req, res) => {
   return res.json(result);
 });
 
-// POST /customer/bookings/:bookingId/cancel?phone=XXXXXXXXXX
-router.post("/customer/bookings/:bookingId/cancel", async (req, res) => {
-  const phone = (req.query.phone as string)?.trim();
-  const { bookingId } = req.params;
+// POST /customer/bookings/:bookingId/cancel
+router.post("/customer/bookings/:bookingId/cancel", requireCustomerAuth, async (req: any, res: any) => {
+  const authReq = req as CustomerAuthRequest;
+  const phone = authReq.customerPhone;
+  const bookingId = req.params.bookingId as string;
   if (!phone) return res.status(400).json({ error: "phone required" });
 
   const bookings = await db
@@ -356,9 +442,10 @@ router.post("/customer/bookings/:bookingId/cancel", async (req, res) => {
   return res.json({ success: true, booking: serializeBooking(updated) });
 });
 
-// GET /customer/bookings/all?phone=XXXXXXXXXX — all bookings for a customer
-router.get("/customer/bookings/all", async (req, res) => {
-  const phone = (req.query.phone as string)?.trim();
+// GET /customer/bookings/all — all bookings for a customer
+router.get("/customer/bookings/all", requireCustomerAuth, async (req: any, res: any) => {
+  const authReq = req as CustomerAuthRequest;
+  const phone = authReq.customerPhone;
   if (!phone) return res.status(400).json({ error: "phone required" });
 
   const rows = await db
@@ -398,18 +485,20 @@ router.get("/customer/bookings/all", async (req, res) => {
       slotTime: b.slotTime,
       slotEndTime: b.slotEndTime,
       status: b.status,
-      arrivalOtp: b.arrivalOtp,
       amountPaid: b.amountPaid,
       totalAmount: b.totalAmount,
       paymentType: b.paymentType,
+      // Only include OTP for confirmed bookings so customer can show it to barber
+      arrivalOtp: b.status === "confirmed" ? b.arrivalOtp : undefined,
     }));
 
   return res.json(result);
 });
 
-// GET /customer/bookings?phone=XXXXXXXXXX — upcoming bookings for a customer
-router.get("/customer/bookings", async (req, res) => {
-  const phone = (req.query.phone as string)?.trim();
+// GET /customer/bookings — upcoming bookings for a customer
+router.get("/customer/bookings", requireCustomerAuth, async (req: any, res: any) => {
+  const authReq = req as CustomerAuthRequest;
+  const phone = authReq.customerPhone;
   if (!phone) return res.status(400).json({ error: "phone required" });
 
   const today = new Date().toISOString().split("T")[0];
@@ -462,7 +551,8 @@ router.get("/customer/bookings", async (req, res) => {
       slotTime: b.slotTime,
       slotEndTime: b.slotEndTime,
       status: b.status,
-      arrivalOtp: b.arrivalOtp,
+      // Only include OTP for confirmed bookings so customer can show it to barber
+      arrivalOtp: b.status === "confirmed" ? b.arrivalOtp : undefined,
     }));
 
   return res.json(result);

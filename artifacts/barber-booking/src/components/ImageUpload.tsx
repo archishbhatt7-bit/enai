@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 interface ImageUploadProps {
   label: string;
@@ -26,6 +27,7 @@ export default function ImageUpload({
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const { token } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const canAddMore = existingPaths.length < maxFiles;
@@ -52,7 +54,10 @@ export default function ImageUpload({
 
         const metaRes = await fetch("/api/storage/uploads/request-url", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
         });
 

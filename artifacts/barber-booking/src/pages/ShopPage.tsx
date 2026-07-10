@@ -24,6 +24,7 @@ import {
   X
 } from "lucide-react";
 import { photoUrl } from "@/components/ImageUpload";
+import { useCustomerAuth } from "@/lib/customerAuth";
 
 declare global { interface Window { L: any; } }
 
@@ -212,6 +213,7 @@ export default function ShopPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const [, navigate] = useLocation();
+  const { logoutCustomer } = useCustomerAuth();
 
   // Auto-fill from profile
   const storedPhone = typeof window !== 'undefined' ? localStorage.getItem("customer_phone") || "" : "";
@@ -265,6 +267,7 @@ export default function ShopPage() {
       const timer = setTimeout(() => setShowSuccessOverlay(false), 2000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [step]);
 
   const { data: profileData, isLoading: shopLoading } = useGetShop(slug);
@@ -277,7 +280,7 @@ export default function ShopPage() {
     slug,
     selectedDate,
     selectedService ?? 0,
-    { query: { enabled: !!selectedService && step === "slot" } }
+    { query: { enabled: !!selectedService && step === "slot" } as any }
   );
 
   const createBookingMutation = useCreateBooking({
@@ -287,6 +290,12 @@ export default function ShopPage() {
         setStep("confirm");
       },
       onError: (err: any) => {
+        if (err?.status === 401) {
+          logoutCustomer();
+          setError("Your session has expired. Please log in again.");
+          setTimeout(() => navigate(`/customer-login?redirect=/shop/${slug}`), 1500);
+          return;
+        }
         setError(err?.data?.error || "Booking failed. Please try again.");
         setStep("contact");
       },

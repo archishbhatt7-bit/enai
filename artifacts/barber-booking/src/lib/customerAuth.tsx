@@ -3,7 +3,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 interface CustomerState {
   phone: string | null;
   isLoggedIn: boolean;
-  loginCustomer: (phone: string) => void;
+  loginCustomer: (phone: string, token: string) => void;
   logoutCustomer: () => void;
   favourites: string[];
   toggleFavourite: (slug: string) => void;
@@ -40,8 +40,9 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const loginCustomer = (newPhone: string) => {
+  const loginCustomer = (newPhone: string, token: string) => {
     localStorage.setItem("customer_phone", newPhone);
+    localStorage.setItem("customer_token", token);
     setPhone(newPhone);
     try {
       const saved = JSON.parse(localStorage.getItem(getFavouritesKey(newPhone)) ?? "[]");
@@ -53,6 +54,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
 
   const logoutCustomer = () => {
     localStorage.removeItem("customer_phone");
+    localStorage.removeItem("customer_token");
     setPhone(null);
     setFavourites([]);
   };

@@ -1,35 +1,36 @@
 import { Router } from "express";
-import { db, shopsTable, servicesTable, bookingsTable } from "@workspace/db";
+import { db, shopsTable, servicesTable, bookingsTable, ownersTable } from "@workspace/db";
 import { eq, and, ilike, or, gte, lte, sql } from "drizzle-orm";
-
+import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
+import { CreateShopBody, UpdateShopStatusBody, UpdateShopSettingsBody } from "@workspace/api-zod";
+import { slugify } from "../lib/auth";
 
 const router = Router();
 
 // GET /shops
 router.get("/shops", async (req, res) => {
   const { q, city, limit = "20" } = req.query as Record<string, string>;
-  let query = db.select().from(shopsTable);
-
-  const allShops = await db.select().from(shopsTable);
-  let filtered = allShops;
-
+  const limitNum = Math.min(Number(limit) || 20, 100);
+  
+  const conditions = [eq(shopsTable.isVerified, true)];
+  
   if (q) {
     const lower = q.toLowerCase();
-    filtered = filtered.filter(
-      (s) =>
-        s.shopName.toLowerCase().includes(lower) ||
-        s.city.toLowerCase().includes(lower) ||
-        s.ownerName.toLowerCase().includes(lower)
-    );
+    conditions.push(or(
+      ilike(shopsTable.shopName, `%${lower}%`),
+      ilike(shopsTable.city, `%${lower}%`)
+    )!);
   }
+  
   if (city) {
-    filtered = filtered.filter((s) =>
-      s.city.toLowerCase().includes(city.toLowerCase())
-    );
+    conditions.push(ilike(shopsTable.city, `%${city}%`));
   }
 
-  const limitNum = Math.min(Number(limit) || 20, 100);
-  filtered = filtered.slice(0, limitNum);
+  // Database-level filtering and limits (Fix #21)
+  const filtered = await db.select()
+    .from(shopsTable)
+    .where(and(...conditions))
+    .limit(limitNum);
 
   // Get service counts and min prices
   const allServices = await db.select().from(servicesTable);
@@ -42,11 +43,10 @@ router.get("/shops", async (req, res) => {
       shopServices.length > 0
         ? Math.min(...shopServices.map((sv) => sv.price))
         : null;
-    const { passwordHash: _, ...shopSafe } = shop;
     return {
-      ...shopSafe,
-      createdAt: shopSafe.createdAt.toISOString(),
-      pausedUntil: shopSafe.pausedUntil?.toISOString() ?? null,
+      ...shop,
+      createdAt: shop.createdAt.toISOString(),
+      pausedUntil: shop.pausedUntil?.toISOString() ?? null,
       servicesCount: shopServices.length,
       minPrice,
       latitude: shop.latitude ?? null,
@@ -57,9 +57,66 @@ router.get("/shops", async (req, res) => {
   return res.json(result);
 });
 
+// POST /shops
+router.post("/shops", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const parsed = CreateShopBody.safeParse(req.body);
+  if (!parsed.success) {
+    const field = parsed.error.errors[0]?.path.join(".");
+    const msg = parsed.error.errors[0]?.message;
+    return res.status(400).json({ error: field ? `Invalid input for ${field}: ${msg}` : "Invalid input" });
+  }
+  const data = parsed.data;
+
+  // Check if owner already has a shop
+  const existingShops = await db.select().from(shopsTable).where(eq(shopsTable.ownerId, req.ownerId!));
+  if (existingShops.length > 0) {
+    return res.status(409).json({ error: "Owner already has a shop" });
+  }
+
+  // Generate unique slug for shop
+  let baseSlug = slugify(data.shopName);
+  let slug = baseSlug;
+  let suffix = 1;
+  while (true) {
+    const slugCheck = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+    if (slugCheck.length === 0) break;
+    slug = `${baseSlug}-${suffix++}`;
+  }
+
+  try {
+    const [shop] = await db
+      .insert(shopsTable)
+      .values({
+        slug,
+        shopName: data.shopName,
+        ownerId: req.ownerId!,
+        city: data.city,
+        address: data.address ?? null,
+        numChairs: data.numChairs,
+        numBarbers: data.numBarbers,
+        openTime: data.openTime ?? "09:00",
+        closeTime: data.closeTime ?? "20:00",
+        pincode: typeof (data as any).pincode === "string" ? (data as any).pincode : null,
+        latitude: typeof (data as any).latitude === "number" ? (data as any).latitude : null,
+        longitude: typeof (data as any).longitude === "number" ? (data as any).longitude : null,
+        isVerified: true, // AUTO-VERIFY New Shops for Customer Visibility
+      })
+      .returning();
+
+    return res.status(201).json({
+      ...shop,
+      createdAt: shop.createdAt.toISOString(),
+      pausedUntil: shop.pausedUntil?.toISOString() ?? null,
+    });
+  } catch (error: any) {
+    req.log.error(error);
+    return res.status(500).json({ error: "Shop creation failed" });
+  }
+});
+
 // GET /shops/:slug
 router.get("/shops/:slug", async (req, res) => {
-  const { slug } = req.params;
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
 
@@ -69,7 +126,9 @@ router.get("/shops/:slug", async (req, res) => {
     .from(servicesTable)
     .where(and(eq(servicesTable.shopId, shop.id), eq(servicesTable.isActive, true)));
 
-  const { passwordHash: _, ...shopSafe } = shop;
+  // Join owner details
+  const owners = await db.select().from(ownersTable).where(eq(ownersTable.id, shop.ownerId));
+  const owner = owners[0];
 
   // Check if pause has expired
   let isPaused = shop.isPaused;
@@ -83,26 +142,30 @@ router.get("/shops/:slug", async (req, res) => {
 
   return res.json({
     shop: {
-      ...shopSafe,
+      ...shop,
+      ownerName: owner?.name ?? "Unknown",
+      phone: owner?.phone ?? "Unknown",
       isPaused,
-      createdAt: shopSafe.createdAt.toISOString(),
-      pausedUntil: shopSafe.pausedUntil?.toISOString() ?? null,
+      createdAt: shop.createdAt.toISOString(),
+      pausedUntil: shop.pausedUntil?.toISOString() ?? null,
     },
     services,
   });
 });
 
 // PATCH /shops/:slug/status
-router.patch("/shops/:slug/status", async (req, res) => {
-  const { slug } = req.params;
+router.patch("/shops/:slug/status", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { isOpen, pauseMinutes } = req.body as {
-    isOpen?: boolean;
-    pauseMinutes?: number | null;
-  };
+  const parsed = UpdateShopStatusBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input: " + parsed.error.errors[0]?.message });
+  }
+  const { isOpen, pauseMinutes } = parsed.data;
 
   let updateData: Partial<typeof shop> = {};
   if (isOpen !== undefined) updateData.isOpen = isOpen;
@@ -130,45 +193,61 @@ router.patch("/shops/:slug/status", async (req, res) => {
 });
 
 // PATCH /shops/:slug/settings
-router.patch("/shops/:slug/settings", async (req, res) => {
-  const { slug } = req.params;
+router.patch("/shops/:slug/settings", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { shopName, numChairs, numBarbers, openTime, closeTime, city, address, ownerName, phone, pincode } = req.body;
-  const update: Record<string, unknown> = {};
-  if (shopName !== undefined) update.shopName = shopName;
-  if (numChairs !== undefined) update.numChairs = numChairs;
-  if (numBarbers !== undefined) update.numBarbers = numBarbers;
-  if (openTime !== undefined) update.openTime = openTime;
-  if (closeTime !== undefined) update.closeTime = closeTime;
-  if (city !== undefined) update.city = city;
-  if (address !== undefined) update.address = address;
-  if (ownerName !== undefined) update.ownerName = ownerName;
-  if (phone !== undefined) update.phone = phone;
-  if (pincode !== undefined) update.pincode = pincode;
+  const parsed = UpdateShopSettingsBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input: " + parsed.error.errors[0]?.message });
+  }
+  const { shopName, numChairs, numBarbers, openTime, closeTime, city, address, ownerName, phone, pincode } = parsed.data;
+  
+  // Update shopsTable
+  const shopUpdate: Record<string, unknown> = {};
+  if (shopName !== undefined) shopUpdate.shopName = shopName;
+  if (numChairs !== undefined) shopUpdate.numChairs = numChairs;
+  if (numBarbers !== undefined) shopUpdate.numBarbers = numBarbers;
+  if (openTime !== undefined) shopUpdate.openTime = openTime;
+  if (closeTime !== undefined) shopUpdate.closeTime = closeTime;
+  if (city !== undefined) shopUpdate.city = city;
+  if (address !== undefined) shopUpdate.address = address;
+  if (pincode !== undefined) shopUpdate.pincode = pincode;
 
   const [updated] = await db
     .update(shopsTable)
-    .set(update)
+    .set(shopUpdate)
     .where(eq(shopsTable.id, shop.id))
     .returning();
 
-  const { passwordHash: _, ...shopSafe } = updated;
+  // Update ownersTable
+  const ownerUpdate: Record<string, string> = {};
+  if (ownerName !== undefined) ownerUpdate.name = ownerName;
+  if (phone !== undefined) ownerUpdate.phone = phone;
+
+  if (Object.keys(ownerUpdate).length > 0) {
+    await db.update(ownersTable).set(ownerUpdate).where(eq(ownersTable.id, shop.ownerId));
+  }
+
   return res.json({
-    ...shopSafe,
-    createdAt: shopSafe.createdAt.toISOString(),
-    pausedUntil: shopSafe.pausedUntil?.toISOString() ?? null,
+    ...updated,
+    ownerName,
+    phone,
+    createdAt: updated.createdAt.toISOString(),
+    pausedUntil: updated.pausedUntil?.toISOString() ?? null,
   });
 });
 
 // GET /shops/:slug/dashboard
-router.get("/shops/:slug/dashboard", async (req, res) => {
-  const { slug } = req.params;
+router.get("/shops/:slug/dashboard", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const today = new Date().toISOString().split("T")[0];
   const allBookings = await db
@@ -178,7 +257,7 @@ router.get("/shops/:slug/dashboard", async (req, res) => {
 
   const todayBookings = allBookings.filter((b) => b.slotDate === today);
   const todayRevenue = todayBookings.reduce((sum, b) => {
-    if (["confirmed", "active", "completed"].includes(b.status)) {
+    if (b.status === "completed") {
       return sum + b.amountPaid;
     }
     return sum;
@@ -198,7 +277,7 @@ router.get("/shops/:slug/dashboard", async (req, res) => {
   const weeklyBookings = allBookings.filter(
     (b) =>
       b.slotDate >= weekAgoStr &&
-      ["confirmed", "active", "completed"].includes(b.status)
+      b.status === "completed"
   );
   const weeklyRevenue = weeklyBookings.reduce((sum, b) => sum + b.amountPaid, 0);
 
@@ -227,16 +306,20 @@ router.get("/shops/:slug/dashboard", async (req, res) => {
 });
 
 // PATCH /shops/:slug/photos — update profile photo + interior photos
-router.patch("/shops/:slug/photos", async (req, res) => {
-  const { slug } = req.params;
+router.patch("/shops/:slug/photos", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { profilePhoto, interiorPhotos } = req.body as {
-    profilePhoto?: string;
-    interiorPhotos?: string[];
-  };
+  const { profilePhoto, interiorPhotos } = req.body;
+  if (profilePhoto !== undefined && typeof profilePhoto !== "string") {
+    return res.status(400).json({ error: "profilePhoto must be a string" });
+  }
+  if (interiorPhotos !== undefined && (!Array.isArray(interiorPhotos) || !interiorPhotos.every((p: unknown) => typeof p === "string"))) {
+    return res.status(400).json({ error: "interiorPhotos must be an array of strings" });
+  }
 
   const update: Record<string, unknown> = {};
   if (profilePhoto !== undefined) update.profilePhoto = profilePhoto;
@@ -248,19 +331,21 @@ router.patch("/shops/:slug/photos", async (req, res) => {
     .where(eq(shopsTable.id, shop.id))
     .returning();
 
-  const { passwordHash: _, ...safe } = updated;
-  return res.json({ ...safe, createdAt: safe.createdAt.toISOString(), pausedUntil: safe.pausedUntil?.toISOString() ?? null });
+  return res.json({ ...updated, createdAt: updated.createdAt.toISOString(), pausedUntil: updated.pausedUntil?.toISOString() ?? null });
 });
 
 // POST /shops/:slug/portfolio — append a portfolio photo
-router.post("/shops/:slug/portfolio", async (req, res) => {
-  const { slug } = req.params;
+router.post("/shops/:slug/portfolio", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { photoPath } = req.body as { photoPath: string };
-  if (!photoPath) return res.status(400).json({ error: "photoPath is required" });
+  const { photoPath } = req.body;
+  if (!photoPath || typeof photoPath !== "string") {
+    return res.status(400).json({ error: "photoPath is required and must be a string" });
+  }
 
   const current = (shop.portfolioPhotos ?? []) as string[];
   const updated = [...current, photoPath];
@@ -270,11 +355,13 @@ router.post("/shops/:slug/portfolio", async (req, res) => {
 });
 
 // DELETE /shops/:slug/portfolio/:index — remove a portfolio photo by index
-router.delete("/shops/:slug/portfolio/:index", async (req, res) => {
-  const { slug, index } = req.params;
+router.delete("/shops/:slug/portfolio/:index", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
+  const index = req.params.index as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
   const idx = parseInt(index, 10);
   const current = (shop.portfolioPhotos ?? []) as string[];
@@ -288,16 +375,14 @@ router.delete("/shops/:slug/portfolio/:index", async (req, res) => {
 });
 
 // PATCH /shops/:slug/schedule
-router.patch("/shops/:slug/schedule", async (req, res) => {
-  const { slug } = req.params;
+router.patch("/shops/:slug/schedule", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
+  const slug = req.params.slug as string;
   const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
+  if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const { openDays, openHours } = req.body as {
-    openDays: number[];
-    openHours?: Record<string, { open: string; close: string }>;
-  };
+  const { openDays, openHours } = req.body;
   if (!Array.isArray(openDays)) {
     return res.status(400).json({ error: "openDays must be an array" });
   }

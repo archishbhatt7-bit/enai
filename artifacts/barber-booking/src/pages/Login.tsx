@@ -13,9 +13,14 @@ export default function Login() {
 
   const mutation = useLoginBarber({
     mutation: {
-      onSuccess: (data) => {
-        login(data.token, data.shop);
-        navigate(`/dashboard/${data.shop.slug}`);
+      onSuccess: (data: any) => {
+        login(data.token, data.owner, data.shop);
+        if (data.shop) {
+          navigate(`/dashboard/${data.shop.slug}`);
+        } else {
+          // If no shop exists yet, they need to create one
+          navigate("/create-shop");
+        }
       },
       onError: () => {
         setError("Invalid phone number or password. Please try again.");

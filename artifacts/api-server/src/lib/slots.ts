@@ -98,13 +98,15 @@ export async function getAvailableSlots(
 }
 
 export async function assignChair(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts db instance or transaction
+  dbOrTx: any,
   shopId: number,
   numChairs: number,
   date: string,
   slotTime: string,
   slotEndTime: string,
 ): Promise<number | null> {
-  const existingBookings = await db
+  const existingBookings = await dbOrTx
     .select()
     .from(bookingsTable)
     .where(
