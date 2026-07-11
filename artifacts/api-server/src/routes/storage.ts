@@ -91,13 +91,13 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
       return;
     }
 
-    const response = await objectStorageService.downloadObject(file);
+    const fetchResponse = (await objectStorageService.downloadObject(file)) as any;
 
-    res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
+    res.status(fetchResponse.status);
+    fetchResponse.headers.forEach((value: string, key: string) => res.setHeader(key, value));
 
-    if (response.body) {
-      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+    if (fetchResponse.body) {
+      const nodeStream = Readable.fromWeb(fetchResponse.body as import("stream/web").ReadableStream<Uint8Array>);
       nodeStream.pipe(res);
     } else {
       res.end();
@@ -156,13 +156,13 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     //   return;
     // }
 
-    const response = await objectStorageService.downloadObject(objectFile);
+    const fetchResponse = (await objectStorageService.downloadObject(objectFile)) as any;
 
-    res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
+    res.status(fetchResponse.status);
+    fetchResponse.headers.forEach((value: string, key: string) => res.setHeader(key, value));
 
-    if (response.body) {
-      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+    if (fetchResponse.body) {
+      const nodeStream = Readable.fromWeb(fetchResponse.body as import("stream/web").ReadableStream<Uint8Array>);
       nodeStream.pipe(res);
     } else {
       res.end();
