@@ -217,6 +217,18 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  if (process.env.VERCEL) {
+    console.log("Running on Vercel. Hiding tsconfig.json to bypass redundant and restrictive Vercel TS compilation...");
+    try {
+      fs.renameSync(
+        path.join(process.cwd(), "tsconfig.json"),
+        path.join(process.cwd(), "tsconfig.backup.json")
+      );
+    } catch (err) {
+      console.warn("Failed to rename tsconfig.json", err);
+    }
+  }
 }
 
 buildAll().catch((err) => {

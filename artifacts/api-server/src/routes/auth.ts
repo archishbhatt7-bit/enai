@@ -3,7 +3,7 @@ import { db, shopsTable, ownersTable, otpSessionsTable } from "@workspace/db";
 import { eq, lt } from "drizzle-orm";
 import { hashPassword, verifyPassword, generateToken, generateOtp, slugify, revokeToken } from "../lib/auth";
 import { RegisterBarberBody, LoginBarberBody, SendOtpBody, VerifyOtpBody } from "@workspace/api-zod";
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
