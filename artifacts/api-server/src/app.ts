@@ -1,6 +1,8 @@
 import express, { type Express } from "express";
 import cors from "cors";
+// @ts-ignore - Vercel TS runner has issues with esModuleInterop for helmet
 import helmet from "helmet";
+// @ts-ignore - Vercel TS runner has issues with esModuleInterop for pino-http
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";

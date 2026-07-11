@@ -21,6 +21,8 @@
     "skipLibCheck": true,
     "target": "es2022",
     "types": [],
-    "customConditions": ["workspace"]
+    "customConditions": ["workspace"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   }
 }
