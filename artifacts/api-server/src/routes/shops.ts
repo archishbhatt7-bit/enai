@@ -393,8 +393,9 @@ router.patch("/shops/:slug/schedule", requireOwnerAuth, async (req: OwnerAuthReq
     const validHours: Record<string, { open: string; close: string }> = {};
     for (const [key, val] of Object.entries(openHours)) {
       const dayNum = parseInt(key);
-      if (dayNum >= 0 && dayNum <= 6 && val?.open && val?.close) {
-        validHours[key] = { open: val.open, close: val.close };
+      const v = val as { open?: string; close?: string };
+      if (dayNum >= 0 && dayNum <= 6 && v?.open && v?.close) {
+        validHours[key] = { open: v.open, close: v.close };
       }
     }
     updatePayload.openHours = validHours;

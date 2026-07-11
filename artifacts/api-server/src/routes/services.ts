@@ -9,7 +9,7 @@ const router = Router();
 // GET /shops/:slug/services
 router.get("/shops/:slug/services", async (req, res) => {
   const { slug } = req.params;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug as string));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
 
   const services = await db
@@ -23,7 +23,7 @@ router.get("/shops/:slug/services", async (req, res) => {
 // POST /shops/:slug/services (owner only)
 router.post("/shops/:slug/services", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const { slug } = req.params;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug as string));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
@@ -44,7 +44,7 @@ router.post("/shops/:slug/services", requireOwnerAuth, async (req: OwnerAuthRequ
 // PATCH /shops/:slug/services/:serviceId (owner only)
 router.patch("/shops/:slug/services/:serviceId", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const { slug, serviceId } = req.params;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug as string));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
@@ -77,7 +77,7 @@ router.patch("/shops/:slug/services/:serviceId", requireOwnerAuth, async (req: O
 // DELETE /shops/:slug/services/:serviceId (owner only)
 router.delete("/shops/:slug/services/:serviceId", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const { slug, serviceId } = req.params;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug as string));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 

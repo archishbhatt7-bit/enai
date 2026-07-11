@@ -49,7 +49,7 @@ export async function getAvailableSlots(
     );
 
   const activeBookings = existingBookings.filter(
-    (b) => !["cancelled", "no_show"].includes(b.status)
+    (b: any) => !["cancelled", "no_show"].includes(b.status)
   );
 
   const openMinutes = timeToMinutes(openTime);
@@ -117,7 +117,7 @@ export async function assignChair(
     );
 
   const activeBookings = existingBookings.filter(
-    (b) => !["cancelled", "no_show"].includes(b.status)
+    (b: any) => !["cancelled", "no_show"].includes(b.status)
   );
 
   const slotStartMins = timeToMinutes(slotTime);
