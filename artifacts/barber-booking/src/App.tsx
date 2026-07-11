@@ -19,9 +19,12 @@ import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 
-// In production, API calls go to the Render backend URL
+// In production, API calls go to the backend URL
 if (import.meta.env.VITE_API_URL) {
   setBaseUrl(import.meta.env.VITE_API_URL);
+} else if (import.meta.env.PROD) {
+  // Fallback for Vercel deployment if env variable is not set
+  setBaseUrl("https://enai-api-server.vercel.app");
 }
 
 setAuthTokenGetter(() => {
