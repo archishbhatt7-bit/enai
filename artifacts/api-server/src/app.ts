@@ -1,12 +1,16 @@
 import express, { type Express } from "express";
 import cors from "cors";
-// @ts-ignore - Vercel TS runner has issues with esModuleInterop for helmet
-import helmet from "helmet";
-// @ts-ignore - Vercel TS runner has issues with esModuleInterop for pino-http
-import pinoHttp from "pino-http";
+import helmetImport from "helmet";
+import pinoHttpImport from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { rateLimit } from "./middleware/rateLimit";
+
+// Vercel's strict TS runner treats these as namespaces rather than callable functions 
+// because it overrides or ignores our esModuleInterop flags. 
+// We cast them here to ensure the build never fails on these call signatures again.
+const helmet = helmetImport as any;
+const pinoHttp = pinoHttpImport as any;
 
 const app: Express = express();
 
