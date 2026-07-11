@@ -29,7 +29,7 @@ export default function Admin() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${apiBase}/api/admin/login", {
+      const res = await fetch(`${apiBase}/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -48,7 +48,7 @@ export default function Admin() {
 
   const fetchShops = async () => {
     try {
-      const res = await fetch(`${apiBase}/api/admin/shops/pending", {
+      const res = await fetch(`${apiBase}/api/admin/shops/pending`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401 || res.status === 403) {
