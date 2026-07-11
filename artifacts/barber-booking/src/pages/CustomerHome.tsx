@@ -4,7 +4,7 @@ import { useListShops, useGetAllCustomerBookings, useCancelCustomerBooking } fro
 import { useCustomerAuth } from "@/lib/customerAuth";
 import { Search, MapPin, Users, Scissors, Star, LogOut, Calendar, Clock, Navigation, User, X, Menu, ArrowLeft } from "lucide-react";
 import CustomerOnboarding, { getCustomerProfile, saveCustomerProfile, type CustomerProfile } from "@/components/CustomerOnboarding";
-import ImageUpload, { photoUrl } from "@/components/ImageUpload";
+
 
 import { type ShopSummary } from "@workspace/api-client-react";
 type Shop = ShopSummary;
@@ -216,7 +216,18 @@ export default function CustomerHome() {
   }
 
   const isSearching = !!submitted;
-  const displayShops = isSearching ? (searchResults ?? []) : allShops;
+  const rawShops = isSearching ? (searchResults ?? []) : allShops;
+
+  const displayShops = rawShops.filter((shop) => {
+    if (!profile?.gender) return true;
+    const userGender = profile.gender.toLowerCase();
+    const shopGender = (shop as any).targetGender?.toLowerCase() || "unisex";
+    
+    if (shopGender === "unisex") return true;
+    if (userGender === "male" && shopGender === "female") return false;
+    if (userGender === "female" && shopGender === "male") return false;
+    return true;
+  });
 
   const sortedShops = (() => {
     const favs = displayShops.filter((s) => isFavourite(s.slug));
@@ -539,21 +550,6 @@ export default function CustomerHome() {
 
               <form onSubmit={handleSaveProfile} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-8 space-y-10">
                 
-                {/* Profile Photo Upload */}
-                <div>
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-3">Profile Picture</h3>
-                  <div className="max-w-xs mt-4">
-                    <ImageUpload
-                      label="Upload an avatar (Optional)"
-                      multiple={false}
-                      maxFiles={1}
-                      existingPaths={editProfile.profilePhoto ? [editProfile.profilePhoto] : []}
-                      onUploaded={(paths) => setEditProfile({ ...editProfile, profilePhoto: paths[0] })}
-                      onRemove={() => setEditProfile({ ...editProfile, profilePhoto: undefined })}
-                    />
-                  </div>
-                </div>
-
                 {/* Personal Info */}
                 <div>
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-3">Personal Information</h3>

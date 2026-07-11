@@ -9,6 +9,7 @@ export default function Register() {
   const { login } = useAuth();
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [demoOtp, setDemoOtp] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     ownerName: "",
@@ -19,8 +20,9 @@ export default function Register() {
 
   const sendOtpMutation = useSendOtp({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (res: any) => {
         setOtpSent(true);
+        if (res?.otp) setDemoOtp(res.otp);
       },
       onError: (err: any) => {
         setError(err?.data?.error || "Failed to send OTP.");
@@ -87,6 +89,13 @@ export default function Register() {
           {error && (
             <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
+            </div>
+          )}
+
+          {demoOtp && (
+            <div className="mb-5 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl">
+              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Demo — Your OTP</p>
+              <p className="text-4xl font-black text-blue-800 tracking-[0.3em]">{demoOtp}</p>
             </div>
           )}
 

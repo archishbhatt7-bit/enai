@@ -6,7 +6,6 @@ export interface CustomerProfile {
   gender: string;
   age: string;
   source?: string;
-  profilePhoto?: string;
 }
 
 const GENDERS = ["Male", "Female", "Other"];

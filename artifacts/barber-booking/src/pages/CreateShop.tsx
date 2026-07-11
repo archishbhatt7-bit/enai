@@ -49,6 +49,7 @@ export default function CreateShop() {
     address: "",
     openTime: "09:00",
     closeTime: "20:00",
+    targetGender: "unisex",
     pincode: "",
     latitude: "",
     longitude: "",
@@ -305,6 +306,18 @@ export default function CreateShop() {
                     onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
                     className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Target Audience</label>
+                  <select
+                    value={form.targetGender}
+                    onChange={(e) => setForm((f) => ({ ...f, targetGender: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 bg-white"
+                  >
+                    <option value="unisex">Unisex</option>
+                    <option value="male">Male Only</option>
+                    <option value="female">Female Only</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Working Chairs *</label>

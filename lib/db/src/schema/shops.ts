@@ -18,6 +18,7 @@ export const shopsTable = pgTable("shops", {
   pausedUntil: timestamp("paused_until"),
   openTime: text("open_time").notNull().default("09:00"),
   closeTime: text("close_time").notNull().default("20:00"),
+  targetGender: text("target_gender").notNull().default("unisex"),
   profilePhoto: text("profile_photo"),
   interiorPhotos: json("interior_photos").$type<string[]>().default([]),
   portfolioPhotos: json("portfolio_photos").$type<string[]>().default([]),

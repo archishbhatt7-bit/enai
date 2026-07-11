@@ -5,6 +5,7 @@
  * Barber Slot Booking Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { ShopCreateInputTargetGender } from './shopCreateInputTargetGender';
 
 export interface ShopCreateInput {
   shopName: string;
@@ -21,4 +22,5 @@ export interface ShopCreateInput {
   pincode?: string;
   latitude?: string;
   longitude?: string;
+  targetGender?: ShopCreateInputTargetGender;
 }

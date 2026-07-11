@@ -67,11 +67,10 @@ router.get("/shops/:slug/bookings", requireOwnerAuth, async (req: OwnerAuthReque
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const today = new Date().toISOString().split("T")[0];
   const rawBookings = await db
     .select()
     .from(bookingsTable)
-    .where(and(eq(bookingsTable.shopId, shops[0].id), eq(bookingsTable.slotDate, today)));
+    .where(eq(bookingsTable.shopId, shops[0].id));
 
   const services = await db.select().from(servicesTable).where(eq(servicesTable.shopId, shops[0].id));
   const serviceMap = new Map(services.map((s) => [s.id, s]));

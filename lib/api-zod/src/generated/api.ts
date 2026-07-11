@@ -41,6 +41,7 @@ export const RegisterBarberResponse = zod.object({
   "ownerName": zod.string(),
   "phone": zod.string(),
   "city": zod.string(),
+  "pincode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "profilePhoto": zod.string().nullish(),
   "interiorPhotos": zod.array(zod.string()).optional(),
@@ -51,6 +52,7 @@ export const RegisterBarberResponse = zod.object({
   "pausedUntil": zod.string().nullish(),
   "openTime": zod.string(),
   "closeTime": zod.string(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional(),
   "createdAt": zod.string()
 }),zod.null()]).optional()
 })
@@ -79,6 +81,7 @@ export const LoginBarberResponse = zod.object({
   "ownerName": zod.string(),
   "phone": zod.string(),
   "city": zod.string(),
+  "pincode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "profilePhoto": zod.string().nullish(),
   "interiorPhotos": zod.array(zod.string()).optional(),
@@ -89,6 +92,7 @@ export const LoginBarberResponse = zod.object({
   "pausedUntil": zod.string().nullish(),
   "openTime": zod.string(),
   "closeTime": zod.string(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional(),
   "createdAt": zod.string()
 }),zod.null()]).optional()
 })
@@ -138,7 +142,8 @@ export const CreateShopBody = zod.object({
   "closeTime": zod.string().optional().describe('HH:MM format e.g. 20:00'),
   "pincode": zod.string().optional(),
   "latitude": zod.string().optional(),
-  "longitude": zod.string().optional()
+  "longitude": zod.string().optional(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional()
 })
 
 export const CreateShopResponse = zod.object({
@@ -148,6 +153,7 @@ export const CreateShopResponse = zod.object({
   "ownerName": zod.string(),
   "phone": zod.string(),
   "city": zod.string(),
+  "pincode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "profilePhoto": zod.string().nullish(),
   "interiorPhotos": zod.array(zod.string()).optional(),
@@ -158,6 +164,7 @@ export const CreateShopResponse = zod.object({
   "pausedUntil": zod.string().nullish(),
   "openTime": zod.string(),
   "closeTime": zod.string(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional(),
   "createdAt": zod.string()
 })
 
@@ -206,6 +213,7 @@ export const GetShopResponse = zod.object({
   "ownerName": zod.string(),
   "phone": zod.string(),
   "city": zod.string(),
+  "pincode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "profilePhoto": zod.string().nullish(),
   "interiorPhotos": zod.array(zod.string()).optional(),
@@ -216,6 +224,7 @@ export const GetShopResponse = zod.object({
   "pausedUntil": zod.string().nullish(),
   "openTime": zod.string(),
   "closeTime": zod.string(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional(),
   "createdAt": zod.string()
 }),
   "services": zod.array(zod.object({
@@ -261,6 +270,7 @@ export const UpdateShopSettingsBody = zod.object({
   "shopName": zod.string().optional(),
   "numChairs": zod.number().optional(),
   "numBarbers": zod.number().optional(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional(),
   "openTime": zod.string().optional(),
   "closeTime": zod.string().optional(),
   "city": zod.string().optional(),
@@ -275,6 +285,7 @@ export const UpdateShopSettingsResponse = zod.object({
   "ownerName": zod.string(),
   "phone": zod.string(),
   "city": zod.string(),
+  "pincode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "profilePhoto": zod.string().nullish(),
   "interiorPhotos": zod.array(zod.string()).optional(),
@@ -285,6 +296,7 @@ export const UpdateShopSettingsResponse = zod.object({
   "pausedUntil": zod.string().nullish(),
   "openTime": zod.string(),
   "closeTime": zod.string(),
+  "targetGender": zod.enum(['unisex', 'male', 'female']).optional(),
   "createdAt": zod.string()
 })
 

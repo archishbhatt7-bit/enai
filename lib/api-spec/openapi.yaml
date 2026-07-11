@@ -725,6 +725,9 @@ components:
           type: string
         longitude:
           type: string
+        targetGender:
+          type: string
+          enum: ["unisex", "male", "female"]
 
     SendOtpInput:
       type: object
@@ -800,6 +803,9 @@ components:
           type: string
         closeTime:
           type: string
+        targetGender:
+          type: string
+          enum: ["unisex", "male", "female"]
         createdAt:
           type: string
       required: [id, slug, shopName, ownerName, phone, city, numChairs, numBarbers, isOpen, isPaused, openTime, closeTime, createdAt]
@@ -879,6 +885,9 @@ components:
           type: integer
         numBarbers:
           type: integer
+        targetGender:
+          type: string
+          enum: ["unisex", "male", "female"]
         openTime:
           type: string
         closeTime:

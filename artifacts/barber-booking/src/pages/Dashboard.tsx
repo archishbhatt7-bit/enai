@@ -247,7 +247,13 @@ export default function Dashboard() {
   const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const [weeklyModalSaving, setWeeklyModalSaving] = useState(false);
   const [editForm, setEditForm] = useState({
-    ownerName: "", shopName: "", phone: "", city: "", address: "", pincode: ""
+    ownerName: "",
+    shopName: "",
+    phone: "",
+    city: "",
+    address: "",
+    pincode: "",
+    targetGender: "unisex",
   });
   const [savingProfile, setSavingProfile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -290,6 +296,11 @@ export default function Dashboard() {
     }
   });
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayBookings = bookings?.filter(b => b.slotDate === todayStr && b.status !== "cancelled") || [];
+  const upcomingBookings = bookings?.filter(b => b.slotDate > todayStr && b.status !== "cancelled") || [];
+  const cancelledBookings = bookings?.filter(b => b.status === "cancelled") || [];
+
   useEffect(() => {
     if (bookings) {
       if (prevBookingCount.current > 0 && bookings.length > prevBookingCount.current) {
@@ -316,7 +327,8 @@ export default function Dashboard() {
         phone: s.phone || "",
         city: s.city || "",
         address: s.address || "",
-        pincode: s.pincode || ""
+        pincode: s.pincode || "",
+        targetGender: s.targetGender || "unisex",
       });
     }
   }, [shopProfile]);
@@ -795,103 +807,105 @@ export default function Dashboard() {
                   <p className="text-slate-500 text-sm mt-1">Verify customer arrivals with their OTP code.</p>
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="font-semibold text-slate-900 text-sm">Today's Orders</h3>
-                    <span className="text-xs text-slate-400">{bookings?.length ?? 0} orders</span>
-                  </div>
-                  {bookingsLoading ? (
-                    <div className="p-5 space-y-3">
-                      {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />)}
+                {[
+                  { title: "Today's Orders", list: todayBookings, emptyMsg: "No orders for today." },
+                  { title: "Upcoming Orders", list: upcomingBookings, emptyMsg: "No upcoming orders right now." },
+                  { title: "Cancelled Orders", list: cancelledBookings, emptyMsg: "No cancelled orders." }
+                ].map(({ title, list, emptyMsg }) => (
+                  <div key={title} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                    <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-slate-900 text-sm">{title}</h3>
+                      <span className="text-xs text-slate-400">{list.length} orders</span>
                     </div>
-                  ) : !bookings || bookings.length === 0 ? (
-                    <div className="p-16 text-center">
-                      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Calendar className="w-8 h-8 text-blue-300" />
+                    {bookingsLoading ? (
+                      <div className="p-5 space-y-3">
+                        {[1,2,3].map(i => <div key={i} className="h-20 bg-slate-50 rounded-lg animate-pulse" />)}
                       </div>
-                      <p className="text-slate-900 font-bold text-lg mb-1">No orders right now</p>
-                      <p className="text-slate-400 text-sm">When customers book a slot, their orders will appear here.</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {bookings.map((booking) => (
-                        <div key={booking.id} className={`p-5 transition-colors ${booking.status === "confirmed" ? "bg-blue-50/30" : ""}`}>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-bold text-slate-900">{booking.customerName}</p>
-                                <span className={`text-xs px-2.5 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[booking.status] ?? ""}`}>
-                                  {booking.status.replace("_", " ")}
-                                </span>
+                    ) : list.length === 0 ? (
+                      <div className="p-10 text-center">
+                        <p className="text-slate-400 text-sm">{emptyMsg}</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100">
+                        {list.map((booking) => (
+                          <div key={booking.id} className={`p-5 transition-colors ${booking.status === "confirmed" ? "bg-blue-50/30" : ""}`}>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-bold text-slate-900">{booking.customerName}</p>
+                                  <span className={`text-xs px-2.5 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[booking.status] ?? ""}`}>
+                                    {booking.status.replace("_", " ")}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-500 mt-1">
+                                  {booking.service?.name ?? "Service"} · Chair {booking.chairNumber}
+                                </p>
+                                <p className="text-sm text-slate-400">
+                                  {booking.slotDate} · {booking.slotTime} – {booking.slotEndTime} · {booking.paymentType === "token" ? "₹1 token" : `₹${booking.amountPaid} paid`}
+                                </p>
                               </div>
-                              <p className="text-sm text-slate-500 mt-1">
-                                {booking.service?.name ?? "Service"} · Chair {booking.chairNumber}
-                              </p>
-                              <p className="text-sm text-slate-400">
-                                {booking.slotTime} – {booking.slotEndTime} · {booking.paymentType === "token" ? "₹1 token" : `₹${booking.amountPaid} paid`}
-                              </p>
-                            </div>
-                            <div className="flex flex-col gap-2 flex-shrink-0 items-end">
-                              {booking.status === "confirmed" && (
-                                <>
-                                  <div className="flex gap-1.5">
-                                    <input
-                                      type="text"
-                                      inputMode="numeric"
-                                      maxLength={6}
-                                      placeholder="Enter OTP"
-                                      value={otpInputs[booking.id] || ""}
-                                      onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
-                                      className="w-28 px-3 py-2 border border-slate-300 rounded-lg text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
+                              <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+                                {booking.status === "confirmed" && (
+                                  <>
+                                    <div className="flex gap-1.5">
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={6}
+                                        placeholder="Enter OTP"
+                                        value={otpInputs[booking.id] || ""}
+                                        onChange={(e) => setOtpInputs((p) => ({ ...p, [booking.id]: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                                        className="w-28 px-3 py-2 border border-slate-300 rounded-lg text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                      <button
+                                        onClick={() => handleOtpVerify(booking.id)}
+                                        disabled={!otpInputs[booking.id] || otpInputs[booking.id]?.length !== 6}
+                                        className="px-3 py-2 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 disabled:opacity-40 transition-colors flex items-center gap-1"
+                                      >
+                                        <CheckCircle className="w-4 h-4" /> Verify
+                                      </button>
+                                    </div>
+                                    {otpErrors[booking.id] && (
+                                      <p className="text-xs text-red-500 font-medium">{otpErrors[booking.id]}</p>
+                                    )}
                                     <button
-                                      onClick={() => handleOtpVerify(booking.id)}
-                                      disabled={!otpInputs[booking.id] || otpInputs[booking.id]?.length !== 6}
-                                      className="px-3 py-2 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 disabled:opacity-40 transition-colors flex items-center gap-1"
+                                      onClick={() => noShowMutation.mutate({ slug, bookingId: booking.id })}
+                                      className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold"
                                     >
-                                      <CheckCircle className="w-4 h-4" /> Verify
+                                      <XCircle className="w-3.5 h-3.5" /> Mark No-show
                                     </button>
-                                  </div>
-                                  {otpErrors[booking.id] && (
-                                    <p className="text-xs text-red-500 font-medium">{otpErrors[booking.id]}</p>
-                                  )}
+                                  </>
+                                )}
+                                {booking.status === "active" && (
                                   <button
-                                    onClick={() => noShowMutation.mutate({ slug, bookingId: booking.id })}
-                                    className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold"
+                                    onClick={() => completeMutation.mutate({ slug, bookingId: booking.id })}
+                                    className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors flex items-center gap-1.5"
                                   >
-                                    <XCircle className="w-3.5 h-3.5" /> Mark No-show
+                                    <CheckCircle className="w-4 h-4" /> Complete
                                   </button>
-                                </>
-                              )}
-                              {booking.status === "active" && (
-                                <button
-                                  onClick={() => completeMutation.mutate({ slug, bookingId: booking.id })}
-                                  className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors flex items-center gap-1.5"
-                                >
-                                  <CheckCircle className="w-4 h-4" /> Complete
-                                </button>
-                              )}
-                              {booking.status === "no_show" && (
-                                <button
-                                  onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
-                                  disabled={undoNoShowMutation.isPending}
-                                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
-                                >
-                                  Undo No-show
-                                </button>
-                              )}
-                              {booking.status === "completed" && (
-                                <span className="text-xs text-green-600 font-bold flex items-center gap-1">
-                                  <CheckCircle className="w-3.5 h-3.5" /> Done
-                                </span>
-                              )}
+                                )}
+                                {booking.status === "no_show" && (
+                                  <button
+                                    onClick={() => undoNoShowMutation.mutate({ slug, bookingId: booking.id })}
+                                    disabled={undoNoShowMutation.isPending}
+                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                  >
+                                    Undo No-show
+                                  </button>
+                                )}
+                                {booking.status === "completed" && (
+                                  <span className="text-xs text-green-600 font-bold flex items-center gap-1">
+                                    <CheckCircle className="w-3.5 h-3.5" /> Done
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -995,6 +1009,18 @@ export default function Dashboard() {
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Pincode</label>
                         <input type="text" value={editForm.pincode} onChange={e => setEditForm({...editForm, pincode: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Target Audience</label>
+                        <select
+                          value={editForm.targetGender}
+                          onChange={(e) => setEditForm({ ...editForm, targetGender: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                          <option value="unisex">Unisex</option>
+                          <option value="male">Male Only</option>
+                          <option value="female">Female Only</option>
+                        </select>
                       </div>
                       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div className="md:col-span-1">

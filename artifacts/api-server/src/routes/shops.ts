@@ -96,6 +96,7 @@ router.post("/shops", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
         numBarbers: data.numBarbers,
         openTime: data.openTime ?? "09:00",
         closeTime: data.closeTime ?? "20:00",
+        targetGender: (data as any).targetGender ?? "unisex",
         pincode: typeof (data as any).pincode === "string" ? (data as any).pincode : null,
         latitude: typeof (data as any).latitude === "number" ? (data as any).latitude : null,
         longitude: typeof (data as any).longitude === "number" ? (data as any).longitude : null,
@@ -216,6 +217,7 @@ router.patch("/shops/:slug/settings", requireOwnerAuth, async (req: OwnerAuthReq
   if (city !== undefined) shopUpdate.city = city;
   if (address !== undefined) shopUpdate.address = address;
   if (pincode !== undefined) shopUpdate.pincode = pincode;
+  if ((parsed.data as any).targetGender !== undefined) shopUpdate.targetGender = (parsed.data as any).targetGender;
 
   const [updated] = await db
     .update(shopsTable)

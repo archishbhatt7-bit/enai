@@ -32,6 +32,15 @@ export interface Owner {
   createdAt: string;
 }
 
+export type ShopTargetGender = typeof ShopTargetGender[keyof typeof ShopTargetGender];
+
+
+export const ShopTargetGender = {
+  unisex: 'unisex',
+  male: 'male',
+  female: 'female',
+} as const;
+
 export interface Shop {
   id: number;
   slug: string;
@@ -39,6 +48,8 @@ export interface Shop {
   ownerName: string;
   phone: string;
   city: string;
+  /** @nullable */
+  pincode?: string | null;
   /** @nullable */
   address?: string | null;
   /** @nullable */
@@ -52,6 +63,7 @@ export interface Shop {
   pausedUntil?: string | null;
   openTime: string;
   closeTime: string;
+  targetGender?: ShopTargetGender;
   createdAt: string;
 }
 
@@ -60,6 +72,15 @@ export interface AuthResponse {
   owner: Owner;
   shop?: Shop | null;
 }
+
+export type ShopCreateInputTargetGender = typeof ShopCreateInputTargetGender[keyof typeof ShopCreateInputTargetGender];
+
+
+export const ShopCreateInputTargetGender = {
+  unisex: 'unisex',
+  male: 'male',
+  female: 'female',
+} as const;
 
 export interface ShopCreateInput {
   shopName: string;
@@ -76,6 +97,7 @@ export interface ShopCreateInput {
   pincode?: string;
   latitude?: string;
   longitude?: string;
+  targetGender?: ShopCreateInputTargetGender;
 }
 
 export interface SendOtpInput {
@@ -149,12 +171,22 @@ export interface ShopStatusResponse {
   pausedUntil?: string | null;
 }
 
+export type ShopSettingsInputTargetGender = typeof ShopSettingsInputTargetGender[keyof typeof ShopSettingsInputTargetGender];
+
+
+export const ShopSettingsInputTargetGender = {
+  unisex: 'unisex',
+  male: 'male',
+  female: 'female',
+} as const;
+
 export interface ShopSettingsInput {
   ownerName?: string;
   phone?: string;
   shopName?: string;
   numChairs?: number;
   numBarbers?: number;
+  targetGender?: ShopSettingsInputTargetGender;
   openTime?: string;
   closeTime?: string;
   city?: string;
