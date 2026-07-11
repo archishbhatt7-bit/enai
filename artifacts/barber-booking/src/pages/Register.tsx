@@ -51,7 +51,7 @@ export default function Register() {
     }
 
     if (!otpSent) {
-      sendOtpMutation.mutate({ data: { phone: form.phone } });
+      sendOtpMutation.mutate({ data: { phone: form.phone, checkOwner: true } });
       return;
     }
 

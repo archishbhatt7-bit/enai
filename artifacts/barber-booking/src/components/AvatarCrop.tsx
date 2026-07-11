@@ -195,7 +195,7 @@ export default function AvatarUpload({ currentPath, onUploaded, className = "" }
     setUploading(true);
     setError("");
     try {
-      const metaRes = await fetch("/api/storage/uploads/request-url", {
+      const metaRes = await fetch(`${apiBase}/api/storage/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "profile.jpg", size: blob.size, contentType: "image/jpeg" }),

@@ -10,6 +10,7 @@ interface PendingShop {
   createdAt: string;
 }
 
+const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
 export default function Admin() {
   const [password, setPassword] = useState("");
   const [token, setToken] = useState<string | null>(localStorage.getItem("admin_token"));
@@ -28,7 +29,7 @@ export default function Admin() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/login", {
+      const res = await fetch(`${apiBase}/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -47,7 +48,7 @@ export default function Admin() {
 
   const fetchShops = async () => {
     try {
-      const res = await fetch("/api/admin/shops/pending", {
+      const res = await fetch(`${apiBase}/api/admin/shops/pending", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401 || res.status === 403) {
@@ -66,7 +67,7 @@ export default function Admin() {
   const handleAction = async (id: number, action: "approve" | "reject") => {
     if (!confirm(`Are you sure you want to ${action} this shop?`)) return;
     try {
-      const res = await fetch(`/api/admin/shops/${id}/${action}`, {
+      const res = await fetch(`${apiBase}/api/admin/shops/${id}/${action}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });

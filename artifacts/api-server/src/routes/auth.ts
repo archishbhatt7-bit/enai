@@ -139,7 +139,15 @@ router.post("/auth/send-otp", authLimiter, async (req, res) => {
     const msg = parsed.error.errors[0]?.message;
     return res.status(400).json({ error: field ? `Invalid input for ${field}: ${msg}` : "Invalid phone" });
   }
-  const { phone } = parsed.data;
+  const { phone, checkOwner } = parsed.data;
+
+  if (checkOwner) {
+    const existingOwner = await db.select().from(ownersTable).where(eq(ownersTable.phone, phone));
+    if (existingOwner.length > 0) {
+      return res.status(409).json({ error: "Phone number already registered" });
+    }
+  }
+
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 

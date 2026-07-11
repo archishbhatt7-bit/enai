@@ -337,7 +337,7 @@ export default function Dashboard() {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      const res = await fetch(`/api/shops/${slug}/settings`, {
+      const res = await fetch(`${apiBase}/api/shops/${slug}/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(editForm),
@@ -408,7 +408,7 @@ export default function Dashboard() {
   const handleSaveSchedule = async (days: number[], hoursMap: Record<string, { open: string; close: string }>) => {
     setWeeklyModalSaving(true);
     try {
-      await fetch(`/api/shops/${slug}/schedule`, {
+      await fetch(`${apiBase}/api/shops/${slug}/schedule`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ openDays: days, openHours: hoursMap }),
@@ -945,7 +945,7 @@ export default function Dashboard() {
                     const durationMinutes = Number(form.duration.value);
                     if (name && price > 0 && durationMinutes > 0) {
                       try {
-                        await fetch(`/api/shops/${slug}/services`, {
+                        await fetch(`${apiBase}/api/shops/${slug}/services`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                           body: JSON.stringify({ name, price, durationMinutes })
@@ -1075,7 +1075,7 @@ export default function Dashboard() {
                         onUploaded={async (paths) => {
                           setPortfolioError("");
                           try {
-                            await fetch(`/api/shops/${slug}/photos`, {
+                            await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ profilePhoto: paths[0] }),
@@ -1089,7 +1089,7 @@ export default function Dashboard() {
                         onRemove={async () => {
                           setPortfolioError("");
                           try {
-                            await fetch(`/api/shops/${slug}/photos`, {
+                            await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ profilePhoto: null }),
@@ -1120,7 +1120,8 @@ export default function Dashboard() {
                               const updated = [...current, ...paths].slice(0, 6);
                               setPortfolioError("");
                               try {
-                                await fetch(`/api/shops/${slug}/photos`, {
+                                const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
+                                await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ interiorPhotos: updated }),
@@ -1135,7 +1136,8 @@ export default function Dashboard() {
                               const updated = current.filter((_, idx) => idx !== i);
                               setPortfolioError("");
                               try {
-                                await fetch(`/api/shops/${slug}/photos`, {
+                                const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
+                                await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ interiorPhotos: updated }),
@@ -1169,7 +1171,7 @@ export default function Dashboard() {
                                     onClick={async () => {
                                       setPortfolioError("");
                                       try {
-                                        await fetch(`/api/shops/${slug}/portfolio/${i}`, { method: "DELETE" });
+                                        await fetch(`${apiBase}/api/shops/${slug}/portfolio/${i}`, { method: "DELETE" });
                                         refetchShopProfile();
                                       } catch {
                                         setPortfolioError("Failed to delete photo.");
@@ -1194,7 +1196,7 @@ export default function Dashboard() {
                                 setPortfolioUploading(true);
                                 try {
                                   for (const p of paths) {
-                                    await fetch(`/api/shops/${slug}/portfolio`, {
+                                    await fetch(`${apiBase}/api/shops/${slug}/portfolio`, {
                                       method: "POST",
                                       headers: { "Content-Type": "application/json" },
                                       body: JSON.stringify({ photoPath: p }),
@@ -1243,7 +1245,7 @@ export default function Dashboard() {
                       onClick={async () => {
                         if (window.confirm("Are you sure you want to permanently delete your account? This cannot be undone.")) {
                           try {
-                            await fetch(`/api/barbers/me`, {
+                            await fetch(`${apiBase}/api/barbers/me`, {
                               method: "DELETE",
                               headers: { "Authorization": `Bearer ${token}` }
                             });

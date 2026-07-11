@@ -12,8 +12,9 @@ interface ImageUploadProps {
   className?: string;
 }
 
+const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
 export function photoUrl(objectPath: string): string {
-  return `/api/storage${objectPath}`;
+  return `${apiBase}/api/storage${objectPath}`;
 }
 
 export default function ImageUpload({
@@ -52,7 +53,7 @@ export default function ImageUpload({
           return;
         }
 
-        const metaRes = await fetch("/api/storage/uploads/request-url", {
+        const metaRes = await fetch(`${apiBase}/api/storage/uploads/request-url`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",

@@ -111,7 +111,8 @@ export default function CreateShop() {
         longitude: form.longitude || undefined,
       };
 
-      const res = await fetch("/api/shops", {
+      const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
+      const res = await fetch(`${apiBase}/api/shops`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -149,7 +150,8 @@ export default function CreateShop() {
 
     setSavingPhotos(true);
     try {
-      const res = await fetch(`/api/shops/${shopSlug}/photos`, {
+      const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
+      const res = await fetch(`${apiBase}/api/shops/${shopSlug}/photos`, {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",

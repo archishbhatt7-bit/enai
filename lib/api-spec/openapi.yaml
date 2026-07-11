@@ -735,6 +735,9 @@ components:
       properties:
         phone:
           type: string
+        checkOwner:
+          type: boolean
+          description: If true, checks if the owner is already registered before sending OTP. Returns 409 if already registered.
 
     OtpSentResponse:
       type: object
