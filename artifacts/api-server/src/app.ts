@@ -54,7 +54,7 @@ app.use("/api", router);
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   req.log.error(err, "Unhandled error");
-  res.status(500).json({ error: "Internal Server Error" });
+  res.status(500).json({ error: "Internal Server Error", details: err.message, stack: err.stack });
 });
 
 export default app;
