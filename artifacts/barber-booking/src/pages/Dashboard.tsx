@@ -410,7 +410,7 @@ export default function Dashboard() {
     try {
       await fetch(`${apiBase}/api/shops/${slug}/schedule`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ openDays: days, openHours: hoursMap }),
       });
       refetchShopProfile();
@@ -1077,7 +1077,7 @@ export default function Dashboard() {
                           try {
                             await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                               method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
+                              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                               body: JSON.stringify({ profilePhoto: paths[0] }),
                             });
                             setProfilePath(paths[0]);
@@ -1091,7 +1091,7 @@ export default function Dashboard() {
                           try {
                             await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                               method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
+                              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                               body: JSON.stringify({ profilePhoto: null }),
                             });
                             setProfilePath(null);
@@ -1119,11 +1119,9 @@ export default function Dashboard() {
                             onUploaded={async (paths) => {
                               const updated = [...current, ...paths].slice(0, 6);
                               setPortfolioError("");
-                              try {
-                                const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
-                                await fetch(`${apiBase}/api/shops/${slug}/photos`, {
+                              try {                                await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                                   method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
+                                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                                   body: JSON.stringify({ interiorPhotos: updated }),
                                 });
                                 setInteriorPaths(updated);
@@ -1135,11 +1133,9 @@ export default function Dashboard() {
                             onRemove={async (i) => {
                               const updated = current.filter((_, idx) => idx !== i);
                               setPortfolioError("");
-                              try {
-                                const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
-                                await fetch(`${apiBase}/api/shops/${slug}/photos`, {
+                              try {                                await fetch(`${apiBase}/api/shops/${slug}/photos`, {
                                   method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
+                                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                                   body: JSON.stringify({ interiorPhotos: updated }),
                                 });
                                 setInteriorPaths(updated);
@@ -1198,7 +1194,7 @@ export default function Dashboard() {
                                   for (const p of paths) {
                                     await fetch(`${apiBase}/api/shops/${slug}/portfolio`, {
                                       method: "POST",
-                                      headers: { "Content-Type": "application/json" },
+                                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
                                       body: JSON.stringify({ photoPath: p }),
                                     });
                                   }

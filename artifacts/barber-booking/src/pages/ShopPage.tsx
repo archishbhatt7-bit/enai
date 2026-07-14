@@ -436,10 +436,39 @@ export default function ShopPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {/* Map */}
+            {/* Map & Location */}
             <div>
                <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Location</h3>
                <ShopMap shopLat={shop.latitude} shopLng={shop.longitude} shopName={shop.shopName} />
+               {/* Address + directions — always shown */}
+               <div className="mt-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                 <div className="flex items-start gap-3">
+                   <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                     <MapPin className="w-4 h-4 text-blue-600" />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                     <p className="text-sm font-bold text-slate-900 leading-snug">
+                       {shop.address || shop.city || "Address not provided"}
+                     </p>
+                     {shop.address && shop.city && (
+                       <p className="text-xs text-slate-500 mt-0.5">{shop.city}{shop.pincode ? ` — ${shop.pincode}` : ""}</p>
+                     )}
+                   </div>
+                 </div>
+                 <a
+                   href={
+                     shop.latitude && shop.longitude
+                       ? `https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}`
+                       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((shop.address || "") + " " + (shop.city || ""))}`
+                   }
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors"
+                 >
+                   <Navigation className="w-4 h-4" />
+                   Get Directions
+                 </a>
+               </div>
             </div>
 
             {/* Hours */}
