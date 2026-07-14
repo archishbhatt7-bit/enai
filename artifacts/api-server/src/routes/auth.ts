@@ -32,24 +32,7 @@ router.post("/auth/register", async (req, res) => {
     return res.status(409).json({ error: "Phone number already registered" });
   }
 
-  // Verify OTP
-  const sessions = await db
-    .select()
-    .from(otpSessionsTable)
-    .where(eq(otpSessionsTable.phone, data.phone));
-
-  const validOtp = sessions.find(
-    (s) => s.otp === data.otp && !s.verified && s.expiresAt > new Date()
-  );
-
-  if (!validOtp) {
-    // Delete session on failed attempt to prevent brute force
-    await db.delete(otpSessionsTable).where(eq(otpSessionsTable.phone, data.phone));
-    return res.status(400).json({ error: "Invalid or expired OTP" });
-  }
-
-  // OTP verified, consume it
-  await db.delete(otpSessionsTable).where(eq(otpSessionsTable.phone, data.phone));
+  // No OTP needed for barber registration — just phone + password
 
   const passwordHash = hashPassword(data.password);
   try {

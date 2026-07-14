@@ -1,42 +1,21 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { Readable } from "stream";
-import fs from "fs/promises";
-import path from "path";
 import express from "express";
+import { randomUUID } from "crypto";
 import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
-import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
-import { ObjectPermission } from "../lib/objectAcl";
 import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
+import { db, photoStoreTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
-const objectStorageService = new ObjectStorageService();
-
-router.put("/storage/local-upload/:objectId", requireOwnerAuth, express.raw({ type: "*/*", limit: "4mb" }), async (req: any, res: any) => {
-  try {
-    const objectId = req.params.objectId as string;
-    // Validate objectId is a UUID to prevent path traversal (e.g. ../../etc/passwd)
-    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(objectId)) {
-      return res.status(400).json({ error: "Invalid object ID format" });
-    }
-    const uploadDir = process.env.VERCEL ? path.join("/tmp", "uploads") : path.join(process.cwd(), "uploads");
-    await fs.mkdir(uploadDir, { recursive: true });
-    await fs.writeFile(path.join(uploadDir, objectId), req.body);
-    res.status(200).send("OK");
-  } catch (error) {
-    req.log.error({ err: error }, "Local upload failed");
-    res.status(500).json({ error: "Local upload failed" });
-  }
-});
 
 /**
  * POST /storage/uploads/request-url
  *
- * Request a presigned URL for file upload.
- * The client sends JSON metadata (name, size, contentType) — NOT the file.
- * Then uploads the file directly to the returned presigned URL.
+ * Returns a local upload URL + the objectPath that will be stored in the DB.
+ * The client then PUTs the raw file to the returned uploadURL.
  */
 router.post("/storage/uploads/request-url", requireOwnerAuth, async (req: OwnerAuthRequest, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
@@ -58,8 +37,15 @@ router.post("/storage/uploads/request-url", requireOwnerAuth, async (req: OwnerA
       return;
     }
 
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-    const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+    const objectId = randomUUID();
+
+    // Build absolute upload URL from the incoming request's own origin
+    const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "";
+    const apiBase = host ? `${proto}://${host}` : "";
+
+    const uploadURL = `${apiBase}/api/storage/upload/${objectId}`;
+    const objectPath = `/photos/${objectId}`;
 
     res.json(
       RequestUploadUrlResponse.parse({
@@ -75,104 +61,98 @@ router.post("/storage/uploads/request-url", requireOwnerAuth, async (req: OwnerA
 });
 
 /**
- * GET /storage/public-objects/*
+ * PUT /storage/upload/:objectId
  *
- * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS.
- * These are unconditionally public — no authentication or ACL checks.
- * IMPORTANT: Always provide this endpoint when object storage is set up.
+ * Receives the raw image file and stores it as base64 in the photo_store table.
+ * Works reliably on Vercel (no ephemeral /tmp dependency).
  */
-router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
+router.put("/storage/upload/:objectId", express.raw({ type: "*/*", limit: "4mb" }), async (req: any, res: any) => {
   try {
-    const raw = req.params.filePath;
-    const filePath = Array.isArray(raw) ? raw.join("/") : raw;
-    const file = await objectStorageService.searchPublicObject(filePath);
-    if (!file) {
-      res.status(404).json({ error: "File not found" });
-      return;
+    const objectId = req.params.objectId as string;
+
+    // Validate objectId is a UUID to prevent abuse
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(objectId)) {
+      return res.status(400).json({ error: "Invalid object ID format" });
     }
 
-    const fetchResponse = (await objectStorageService.downloadObject(file)) as any;
-
-    res.status(fetchResponse.status);
-    fetchResponse.headers.forEach((value: string, key: string) => res.setHeader(key, value));
-
-    if (fetchResponse.body) {
-      const nodeStream = Readable.fromWeb(fetchResponse.body as import("stream/web").ReadableStream<Uint8Array>);
-      nodeStream.pipe(res);
-    } else {
-      res.end();
+    const body = req.body as Buffer;
+    if (!body || body.length === 0) {
+      return res.status(400).json({ error: "Empty file" });
     }
+
+    const contentType = req.headers["content-type"] || "image/jpeg";
+    const base64Data = body.toString("base64");
+
+    // Upsert into photo_store
+    await db.insert(photoStoreTable).values({
+      id: objectId,
+      contentType,
+      data: base64Data,
+    }).onConflictDoUpdate({
+      target: photoStoreTable.id,
+      set: { contentType, data: base64Data },
+    });
+
+    res.status(200).send("OK");
   } catch (error) {
-    req.log.error({ err: error }, "Error serving public object");
-    res.status(500).json({ error: "Failed to serve public object" });
+    req.log?.error?.({ err: error }, "Photo upload failed");
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
 /**
- * GET /storage/objects/*
+ * GET /storage/photos/:objectId
  *
- * Serve object entities from PRIVATE_OBJECT_DIR.
- * These are served from a separate path from /public-objects and can optionally
- * be protected with authentication or ACL checks based on the use case.
+ * Serves a photo from the database. Decodes base64 and sends the raw image.
  */
-router.get("/storage/objects/*path", async (req: Request, res: Response) => {
+router.get("/storage/photos/:objectId", async (req: Request, res: Response) => {
   try {
-    const raw = req.params.path;
-    const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
+    const objectId = req.params.objectId as string;
 
-    // Prevent path traversal attacks
-    if (wildcardPath.includes("..") || wildcardPath.includes("\\")) {
-      res.status(400).json({ error: "Invalid object path" });
-      return;
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(objectId)) {
+      return res.status(400).json({ error: "Invalid object ID" });
     }
 
-    if (!process.env.PRIVATE_OBJECT_DIR) {
-      // Local mode: validate path is a UUID to prevent arbitrary file access
-      if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(wildcardPath)) {
-        res.status(400).json({ error: "Invalid object ID format" });
-        return;
-      }
-      const uploadDir = process.env.VERCEL ? path.join("/tmp", "uploads") : path.join(process.cwd(), "uploads");
-      const filePath = path.join(uploadDir, wildcardPath);
-      res.sendFile(filePath);
-      return;
+    const rows = await db.select().from(photoStoreTable).where(eq(photoStoreTable.id, objectId));
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Photo not found" });
     }
 
-    const objectPath = `/objects/${wildcardPath}`;
-    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+    const photo = rows[0];
+    const buffer = Buffer.from(photo.data, "base64");
 
-    // --- Protected route example ---
-    // if (!req.isAuthenticated()) {
-    //   res.status(401).json({ error: "Unauthorized" });
-    //   return;
-    // }
-    // const canAccess = await objectStorageService.canAccessObjectEntity({
-    //   userId: req.user.id,
-    //   objectFile,
-    //   requestedPermission: ObjectPermission.READ,
-    // });
-    // if (!canAccess) {
-    //   res.status(403).json({ error: "Forbidden" });
-    //   return;
-    // }
-
-    const fetchResponse = (await objectStorageService.downloadObject(objectFile)) as any;
-
-    res.status(fetchResponse.status);
-    fetchResponse.headers.forEach((value: string, key: string) => res.setHeader(key, value));
-
-    if (fetchResponse.body) {
-      const nodeStream = Readable.fromWeb(fetchResponse.body as import("stream/web").ReadableStream<Uint8Array>);
-      nodeStream.pipe(res);
-    } else {
-      res.end();
-    }
+    res.setHeader("Content-Type", photo.contentType);
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.send(buffer);
   } catch (error) {
-    if (error instanceof ObjectNotFoundError) {
-      req.log.warn({ err: error }, "Object not found");
-      res.status(404).json({ error: "Object not found" });
-      return;
+    req.log.error({ err: error }, "Error serving photo");
+    res.status(500).json({ error: "Failed to serve photo" });
+  }
+});
+
+// Legacy: also handle /storage/objects/:id for backward compatibility with old paths
+router.get("/storage/objects/:path", async (req: Request, res: Response) => {
+  try {
+    const wildcardPath = req.params.path as string;
+
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(wildcardPath)) {
+      return res.status(400).json({ error: "Invalid object ID" });
     }
+
+    // Check database first
+    const rows = await db.select().from(photoStoreTable).where(eq(photoStoreTable.id, wildcardPath));
+    if (rows.length > 0) {
+      const photo = rows[0];
+      const buffer = Buffer.from(photo.data, "base64");
+      res.setHeader("Content-Type", photo.contentType);
+      res.setHeader("Content-Length", buffer.length);
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return res.send(buffer);
+    }
+
+    return res.status(404).json({ error: "Photo not found" });
+  } catch (error) {
     req.log.error({ err: error }, "Error serving object");
     res.status(500).json({ error: "Failed to serve object" });
   }

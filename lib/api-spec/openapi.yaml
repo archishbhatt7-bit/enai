@@ -651,15 +651,13 @@ components:
     # Auth
     BarberRegistrationInput:
       type: object
-      required: [ownerName, phone, password, otp]
+      required: [ownerName, phone, password]
       properties:
         ownerName:
           type: string
         phone:
           type: string
         password:
-          type: string
-        otp:
           type: string
 
     LoginInput:

@@ -2,32 +2,17 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { Scissors, ArrowLeft } from "lucide-react";
-import { useRegisterBarber, useSendOtp } from "@workspace/api-client-react";
+import { useRegisterBarber } from "@workspace/api-client-react";
 
 export default function Register() {
   const [, navigate] = useLocation();
   const { login } = useAuth();
   const [error, setError] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [demoOtp, setDemoOtp] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     ownerName: "",
     phone: "",
     password: "",
-    otp: "",
-  });
-
-  const sendOtpMutation = useSendOtp({
-    mutation: {
-      onSuccess: (res: any) => {
-        setOtpSent(true);
-        if (res?.otp) setDemoOtp(res.otp);
-      },
-      onError: (err: any) => {
-        setError(err?.data?.error || "Failed to send OTP.");
-      }
-    }
   });
 
   const registerMutation = useRegisterBarber({
@@ -49,20 +34,16 @@ export default function Register() {
       setError("Please fill in all required fields.");
       return;
     }
-
-    if (!otpSent) {
-      sendOtpMutation.mutate({ data: { phone: form.phone, checkOwner: true } });
+    if (form.phone.length < 10) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
 
-    if (!form.otp) {
-      setError("Please enter the OTP.");
-      return;
-    }
-
-    registerMutation.mutate({
-      data: form as any,
-    });
+    registerMutation.mutate({ data: form });
   };
 
   return (
@@ -92,13 +73,6 @@ export default function Register() {
             </div>
           )}
 
-          {demoOtp && (
-            <div className="mb-5 p-4 bg-blue-50 border-2 border-blue-200 rounded-2xl">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Demo — Your OTP</p>
-              <p className="text-4xl font-black text-blue-800 tracking-[0.3em]">{demoOtp}</p>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Owner Name *</label>
@@ -107,8 +81,7 @@ export default function Register() {
                 placeholder="Your full name"
                 value={form.ownerName}
                 onChange={(e) => setForm((f) => ({ ...f, ownerName: e.target.value }))}
-                disabled={otpSent}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               />
             </div>
             <div>
@@ -120,41 +93,26 @@ export default function Register() {
                 placeholder="10-digit mobile"
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                disabled={otpSent}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Password *</label>
               <input
                 type="password"
-                placeholder="Choose a password"
+                placeholder="Choose a password (min 6 chars)"
                 value={form.password}
                 onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                disabled={otpSent}
-                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 disabled:bg-slate-100 disabled:text-slate-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
               />
             </div>
 
-            {otpSent && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">OTP *</label>
-                <input
-                  type="text"
-                  placeholder="Enter 6-digit OTP"
-                  value={form.otp}
-                  onChange={(e) => setForm((f) => ({ ...f, otp: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                />
-              </div>
-            )}
-            
             <button
               type="submit"
-              disabled={registerMutation.isPending || sendOtpMutation.isPending}
+              disabled={registerMutation.isPending}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60 mt-4"
             >
-              {!otpSent ? (sendOtpMutation.isPending ? "Sending OTP..." : "Send OTP") : (registerMutation.isPending ? "Creating account..." : "Verify & Register")}
+              {registerMutation.isPending ? "Creating account..." : "Register"}
             </button>
           </form>
           

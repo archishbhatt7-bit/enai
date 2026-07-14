@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { X, Check, ZoomIn, ZoomOut, Upload } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 interface AvatarCropProps {
   onCropped: (blob: Blob, objectUrl: string) => void;
@@ -178,6 +179,7 @@ export default function AvatarUpload({ currentPath, onUploaded, className = "" }
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { token } = useAuth();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -197,7 +199,7 @@ export default function AvatarUpload({ currentPath, onUploaded, className = "" }
     try {
       const metaRes = await fetch(`${apiBase}/api/storage/uploads/request-url`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ name: "profile.jpg", size: blob.size, contentType: "image/jpeg" }),
       });
       if (!metaRes.ok) throw new Error("Failed to get upload URL");
