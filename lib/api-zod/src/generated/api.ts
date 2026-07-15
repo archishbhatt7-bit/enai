@@ -22,8 +22,7 @@ export const HealthCheckResponse = zod.object({
 export const RegisterBarberBody = zod.object({
   "ownerName": zod.string(),
   "phone": zod.string(),
-  "password": zod.string(),
-  "otp": zod.string()
+  "password": zod.string()
 })
 
 export const RegisterBarberResponse = zod.object({

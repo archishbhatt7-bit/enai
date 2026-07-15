@@ -1,7 +1,7 @@
 {
   "version": 2,
   "installCommand": "cd ../.. && npm i -g pnpm && pnpm install",
-  "buildCommand": "cd ../.. && pnpm --filter @workspace/db run build && pnpm --filter @workspace/api-zod run build && pnpm --filter @workspace/api-server run build",
+  "buildCommand": "cd ../.. && pnpm --filter @workspace/api-server run build",
   "functions": {
     "api/index.mjs": {
       "includeFiles": "dist/**"
