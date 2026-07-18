@@ -170,7 +170,7 @@ router.post("/shops/:slug/bookings", requireCustomerAuth, async (req: CustomerAu
     }
   }
 
-  const amountPaid = paymentType === "full" ? service.price : 1;
+  const amountPaid = paymentType === "full" ? service.price : 5;
   const arrivalOtp = generateOtp();
 
   try {

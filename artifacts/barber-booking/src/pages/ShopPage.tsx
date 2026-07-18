@@ -737,9 +737,9 @@ export default function ShopPage() {
                           <div className="flex items-start justify-between">
                             <div>
                               <p className="font-black text-slate-900 text-base">Token Booking</p>
-                              <p className="text-3xl font-black text-blue-600 mt-2 tracking-tight">₹1</p>
+                              <p className="text-3xl font-black text-blue-600 mt-2 tracking-tight">₹5</p>
                               <p className="text-xs text-slate-500 font-medium mt-3">Pay ₹{selectedServiceObj.price} directly to barber after service.</p>
-                              <p className="text-[10px] uppercase tracking-widest text-blue-700 font-bold mt-2">₹1 platform fee charged now</p>
+                              <p className="text-[10px] uppercase tracking-widest text-blue-700 font-bold mt-2">₹5 platform fee charged now</p>
                             </div>
                             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors ${paymentType === "token" ? "border-blue-600 bg-blue-600" : "border-slate-300"}`}>
                               {paymentType === "token" && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
