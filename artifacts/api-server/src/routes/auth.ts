@@ -4,6 +4,7 @@ import { eq, lt } from "drizzle-orm";
 import { hashPassword, verifyPassword, generateToken, generateOtp, slugify, revokeToken } from "../lib/auth";
 import { RegisterBarberBody, LoginBarberBody, SendOtpBody, VerifyOtpBody } from "@workspace/api-zod";
 import { rateLimit } from "express-rate-limit";
+import { sendOtpSms } from "../lib/sms";
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -148,10 +149,16 @@ router.post("/auth/send-otp", authLimiter, async (req, res) => {
     expiresAt,
   });
 
-  // In production: send via WhatsApp. For now, log it.
-  req.log.info({ phone }, "OTP generated for phone");
+  try {
+    await sendOtpSms(phone, otp);
+  } catch (err) {
+    req.log.error(err, "Failed to send OTP SMS");
+    // Optionally return 500 here if you want it to hard-fail when SMS fails
+  }
 
-  return res.json({ success: true, message: "OTP sent to your WhatsApp", otp }); // Return OTP in demo
+  req.log.info({ phone }, "OTP generated and sent via SMS");
+
+  return res.json({ success: true, message: "OTP sent via SMS", otp }); // Return OTP for demo mode
 });
 
 // POST /auth/verify-otp

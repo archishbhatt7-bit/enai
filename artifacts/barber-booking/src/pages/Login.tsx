@@ -6,7 +6,18 @@ import { Scissors, ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { login } = useAuth();
+  const { login, isAuthenticated, shop } = useAuth();
+  
+  // If already logged in, bounce to dashboard immediately
+  if (isAuthenticated) {
+    if (shop) {
+      navigate(`/dashboard/${shop.slug}`, { replace: true });
+    } else {
+      navigate("/create-shop", { replace: true });
+    }
+    return null;
+  }
+
   const [form, setForm] = useState({ phone: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");

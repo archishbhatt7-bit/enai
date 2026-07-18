@@ -8,8 +8,15 @@ type Step = "phone" | "otp";
 
 export default function CustomerLogin() {
   const [, navigate] = useLocation();
-  const { loginCustomer } = useCustomerAuth();
+  const { loginCustomer, isLoggedIn } = useCustomerAuth();
   const [step, setStep] = useState<Step>("phone");
+  
+  // If already logged in, bounce to dashboard immediately
+  if (isLoggedIn) {
+    navigate("/customer", { replace: true });
+    return null; // Don't render the form
+  }
+
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [demoOtp, setDemoOtp] = useState<string | null>(null);
