@@ -55,8 +55,16 @@ export async function getAvailableSlots(
   const openMinutes = timeToMinutes(openTime);
   const closeMinutes = timeToMinutes(closeTime);
   const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayStr = now.toISOString().split("T")[0];
+  
+  // Use Asia/Kolkata timezone since the app targets India
+  const istFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+  const todayStr = istFormatter.format(now);
+  
+  const istHrFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', hour: 'numeric', hourCycle: 'h23' });
+  const istMinFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', minute: 'numeric' });
+  
+  const nowMinutes = parseInt(istHrFormatter.format(now)) * 60 + parseInt(istMinFormatter.format(now));
+  
   const isToday = date === todayStr;
   const advanceMinutes = ADVANCE_BOOKING_HOURS * 60;
 

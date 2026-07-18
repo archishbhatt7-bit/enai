@@ -136,7 +136,7 @@ export default function CustomerHome() {
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"distance" | "price">("distance");
-  const [filterGender, setFilterGender] = useState<"all" | "male" | "female">("all");
+  const [filterGender, setFilterGender] = useState<"all" | "male" | "female" | "unisex">("all");
 
   // --- Profile State ---
   const [profile, setProfile] = useState<CustomerProfile | null>(() => phone ? getCustomerProfile(phone) : null);
@@ -227,11 +227,7 @@ export default function CustomerHome() {
   const displayShops = rawShops.filter((shop) => {
     if (filterGender === "all") return true;
     const shopGender = (shop as any).targetGender?.toLowerCase() || "unisex";
-    
-    if (shopGender === "unisex") return true;
-    if (filterGender === "male" && shopGender === "female") return false;
-    if (filterGender === "female" && shopGender === "male") return false;
-    return true;
+    return shopGender === filterGender;
   });
 
   const sortedShops = (() => {
@@ -425,7 +421,7 @@ export default function CustomerHome() {
                   
                   <div className="flex flex-col sm:flex-row gap-3">
                     {/* Gender Filter UI */}
-                    <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto">
+                    <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto overflow-x-auto">
                       <button
                         onClick={() => setFilterGender("all")}
                         className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
@@ -443,6 +439,12 @@ export default function CustomerHome() {
                         className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "female" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                       >
                         Female
+                      </button>
+                      <button
+                        onClick={() => setFilterGender("unisex")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "unisex" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        Unisex
                       </button>
                     </div>
 
