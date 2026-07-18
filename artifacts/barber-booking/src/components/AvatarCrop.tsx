@@ -215,7 +215,7 @@ export default function AvatarUpload({ currentPath, onUploaded, className = "" }
     }
   };
 
-  const photoSrc = preview ?? (currentPath ? `/api/storage${currentPath}` : null);
+  const photoSrc = preview ?? (currentPath ? `${apiBase}/api/storage${currentPath}` : null);
 
   return (
     <div className={className}>

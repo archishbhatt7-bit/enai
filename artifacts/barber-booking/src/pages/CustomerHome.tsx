@@ -4,7 +4,7 @@ import { useListShops, useGetAllCustomerBookings, useCancelCustomerBooking } fro
 import { useCustomerAuth } from "@/lib/customerAuth";
 import { Search, MapPin, Users, Scissors, Star, LogOut, Calendar, Clock, Navigation, User, X, Menu, ArrowLeft } from "lucide-react";
 import CustomerOnboarding, { getCustomerProfile, saveCustomerProfile, type CustomerProfile } from "@/components/CustomerOnboarding";
-
+import { photoUrl } from "@/components/ImageUpload";
 
 import { type ShopSummary } from "@workspace/api-client-react";
 type Shop = ShopSummary;
@@ -65,7 +65,7 @@ function ShopCard({
         <div className="flex gap-4 flex-1 min-w-0">
           {shop.profilePhoto ? (
             <img
-              src={`/api/storage${shop.profilePhoto}`}
+              src={photoUrl(shop.profilePhoto)}
               alt={shop.shopName}
               className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-slate-100"
             />
@@ -146,9 +146,6 @@ export default function CustomerHome() {
   useEffect(() => {
     if (profile && profile.gender) {
       setEditProfile(profile);
-      if (filterGender === "all" && (profile.gender.toLowerCase() === "male" || profile.gender.toLowerCase() === "female")) {
-        setFilterGender(profile.gender.toLowerCase() as any);
-      }
     }
   }, [profile]);
 
