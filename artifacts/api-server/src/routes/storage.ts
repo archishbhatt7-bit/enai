@@ -75,9 +75,9 @@ router.put("/storage/upload/:objectId", express.raw({ type: "*/*", limit: "4mb" 
       return res.status(400).json({ error: "Invalid object ID format" });
     }
 
-    const body = req.body as Buffer;
-    if (!body || body.length === 0) {
-      return res.status(400).json({ error: "Empty file" });
+    const body = req.body;
+    if (!body || !Buffer.isBuffer(body) || body.length === 0) {
+      return res.status(400).json({ error: "Empty or invalid file data" });
     }
 
     const contentType = req.headers["content-type"] || "image/jpeg";

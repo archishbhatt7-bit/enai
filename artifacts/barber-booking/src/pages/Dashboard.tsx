@@ -510,7 +510,39 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar + main layout */}
       <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
+        {/* Mobile Sidebar Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex lg:hidden">
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+            <aside className="w-64 bg-gradient-to-b from-blue-900 to-blue-950 text-white flex-shrink-0 flex flex-col h-full relative z-10 shadow-2xl">
+              <div className="p-5 border-b border-blue-800/50 flex justify-between items-center">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 bg-blue-500 rounded-md flex items-center justify-center">
+                      <Scissors className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="font-bold text-sm">eNai</span>
+                  </div>
+                  <p className="text-slate-400 text-xs truncate">{shop.shopName}</p>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/10 rounded-lg text-white">
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+              <SidebarContent />
+              <div className="p-4 border-t border-blue-800/50">
+                <button
+                  onClick={() => { logout(); navigate("/"); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-blue-200 hover:text-white hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <LogOut className="w-4 h-4" /> Sign out
+                </button>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
         <aside className="w-52 bg-gradient-to-b from-blue-900 to-blue-950 text-white flex-shrink-0 flex flex-col hidden lg:flex">
           <div className="p-5 border-b border-blue-800/50">
             <div className="flex items-center gap-2 mb-1">

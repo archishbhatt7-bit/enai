@@ -136,6 +136,7 @@ export default function CustomerHome() {
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"distance" | "price">("distance");
+  const [filterGender, setFilterGender] = useState<"all" | "male" | "female">("all");
 
   // --- Profile State ---
   const [profile, setProfile] = useState<CustomerProfile | null>(() => phone ? getCustomerProfile(phone) : null);
@@ -143,7 +144,12 @@ export default function CustomerHome() {
   const [editProfile, setEditProfile] = useState<CustomerProfile>({ name: "", gender: "", age: "" });
 
   useEffect(() => {
-    if (profile) setEditProfile(profile);
+    if (profile && profile.gender) {
+      setEditProfile(profile);
+      if (filterGender === "all" && (profile.gender.toLowerCase() === "male" || profile.gender.toLowerCase() === "female")) {
+        setFilterGender(profile.gender.toLowerCase() as any);
+      }
+    }
   }, [profile]);
 
   useEffect(() => {
@@ -219,13 +225,12 @@ export default function CustomerHome() {
   const rawShops = isSearching ? (searchResults ?? []) : allShops;
 
   const displayShops = rawShops.filter((shop) => {
-    if (!profile?.gender) return true;
-    const userGender = profile.gender.toLowerCase();
+    if (filterGender === "all") return true;
     const shopGender = (shop as any).targetGender?.toLowerCase() || "unisex";
     
     if (shopGender === "unisex") return true;
-    if (userGender === "male" && shopGender === "female") return false;
-    if (userGender === "female" && shopGender === "male") return false;
+    if (filterGender === "male" && shopGender === "female") return false;
+    if (filterGender === "female" && shopGender === "male") return false;
     return true;
   });
 
@@ -418,20 +423,44 @@ export default function CustomerHome() {
                     {isSearching ? `Results for "${submitted}"` : "Top Barbers"}
                   </h2>
                   
-                  {/* Sorting Logic UI */}
-                  <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto">
-                    <button
-                      onClick={() => setSortBy("distance")}
-                      className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === "distance" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                    >
-                      Nearest
-                    </button>
-                    <button
-                      onClick={() => setSortBy("price")}
-                      className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === "price" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                    >
-                      Cheapest
-                    </button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Gender Filter UI */}
+                    <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto">
+                      <button
+                        onClick={() => setFilterGender("all")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setFilterGender("male")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "male" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        Male
+                      </button>
+                      <button
+                        onClick={() => setFilterGender("female")}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "female" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        Female
+                      </button>
+                    </div>
+
+                    {/* Sorting Logic UI */}
+                    <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto">
+                      <button
+                        onClick={() => setSortBy("distance")}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === "distance" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        Nearest
+                      </button>
+                      <button
+                        onClick={() => setSortBy("price")}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === "price" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                      >
+                        Cheapest
+                      </button>
+                    </div>
                   </div>
                 </div>
 
