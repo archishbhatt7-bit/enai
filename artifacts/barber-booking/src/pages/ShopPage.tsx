@@ -510,7 +510,9 @@ export default function ShopPage() {
                   onClick={() => {
                     setSelectedService(service.id);
                     setStep("slot");
-                    window.scrollTo({ top: 400, behavior: "smooth" }); // Scroll to view side panel on mobile
+                    if (window.innerWidth < 1024) {
+                      window.scrollTo({ top: 400, behavior: "smooth" }); // Scroll to view side panel on mobile
+                    }
                   }}
                   className={`text-left border-2 rounded-3xl p-5 transition-all group disabled:opacity-50 disabled:cursor-not-allowed ${
                     selectedService === service.id 
