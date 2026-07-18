@@ -122,7 +122,8 @@ router.post("/auth/send-otp", authLimiter, async (req, res) => {
     const msg = parsed.error.errors[0]?.message;
     return res.status(400).json({ error: field ? `Invalid input for ${field}: ${msg}` : "Invalid phone" });
   }
-  const { phone, checkOwner } = parsed.data;
+  const phone = parsed.data.phone;
+  const checkOwner = (parsed.data as any).checkOwner;
 
   if (checkOwner) {
     const existingOwner = await db.select().from(ownersTable).where(eq(ownersTable.phone, phone));

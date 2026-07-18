@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "installCommand": "echo 'Skipping install'",
-  "buildCommand": "echo 'Skipping build'",
+  "installCommand": "cd ../.. && npm i -g pnpm && pnpm install",
+  "buildCommand": "cd ../.. && pnpm --filter @workspace/api-server run build",
   "functions": {
     "api/index.mjs": {
       "includeFiles": "dist/**"

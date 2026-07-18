@@ -124,10 +124,10 @@ router.get("/storage/photos/:objectId", async (req: Request, res: Response) => {
     res.setHeader("Content-Type", photo.contentType);
     res.setHeader("Content-Length", buffer.length);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    res.send(buffer);
+    return res.send(buffer);
   } catch (error) {
-    req.log.error({ err: error }, "Error serving photo");
-    res.status(500).json({ error: "Failed to serve photo" });
+    req.log.error({ err: error }, "Error serving legacy photo");
+    return res.status(500).json({ error: "Failed to serve photo" });
   }
 });
 
@@ -154,7 +154,7 @@ router.get("/storage/objects/:path", async (req: Request, res: Response) => {
     return res.status(404).json({ error: "Photo not found" });
   } catch (error) {
     req.log.error({ err: error }, "Error serving object");
-    res.status(500).json({ error: "Failed to serve object" });
+    return res.status(500).json({ error: "Failed to serve object" });
   }
 });
 
