@@ -59,6 +59,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "https://enai-api-server.vercel.app" : "");
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-blue-100 text-blue-700 border-blue-200",
