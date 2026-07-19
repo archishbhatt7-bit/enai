@@ -136,11 +136,7 @@ export default function CustomerLogin() {
     
     if (window.sendOtp) {
       try {
-        const response = await window.sendOtp({ identifier: "91" + phone });
-        console.log("MSG91 send response", response);
-        if (response.message) {
-          setReqId(response.message);
-        }
+        window.sendOtp({ identifier: "91" + phone });
         setStep("otp");
       } catch (err: any) {
         setError(err?.message || (typeof err === "string" ? err : "Failed to send OTP via MSG91"));
