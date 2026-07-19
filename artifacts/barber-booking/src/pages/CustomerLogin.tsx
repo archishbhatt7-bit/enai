@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
+import { useSendOtp, useVerifyOtp, customFetch } from "@workspace/api-client-react";
 import { useCustomerAuth } from "@/lib/customerAuth";
 import { ArrowLeft, Phone, Scissors } from "lucide-react";
+
+declare global {
+  interface Window {
+    initSendOTP: (config: any) => void;
+    sendOtp: (args: any) => Promise<any>;
+    verifyOtp: (args: any) => Promise<any>;
+    retryOtp: (args: any) => Promise<any>;
+  }
+}
 
 type Step = "phone" | "otp";
 
@@ -21,6 +30,79 @@ export default function CustomerLogin() {
   const [otp, setOtp] = useState("");
   const [demoOtp, setDemoOtp] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [reqId, setReqId] = useState<string | null>(null);
+  const [msg91Verifying, setMsg91Verifying] = useState(false);
+
+  const phoneRef = useRef(phone);
+  useEffect(() => {
+    phoneRef.current = phone;
+  }, [phone]);
+
+  const doMsg91Verify = async (msg91Token: string) => {
+    setMsg91Verifying(true);
+    try {
+      const data = await customFetch<{ verified: boolean; token?: string; error?: string }>("/auth/verify-msg91", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phoneRef.current, msg91Token }),
+      });
+      if (data.verified && data.token) {
+         loginCustomer(phoneRef.current, data.token);
+         navigate("/customer");
+      } else {
+         setError(data.error || "Verification failed on backend");
+      }
+    } catch (e: any) {
+      setError(e.message || "Network error during verification");
+    } finally {
+      setMsg91Verifying(false);
+    }
+  };
+
+  useEffect(() => {
+    const configuration = {
+      widgetId: "366773707859333133323432",
+      tokenAuth: "552017Td8Qszz8w6a5cfaffP1",
+      exposeMethods: true,
+      success: (data: any) => {
+        console.log("MSG91 success", data);
+        if (data.message) {
+          doMsg91Verify(data.message);
+        }
+      },
+      failure: (error: any) => {
+        console.log("MSG91 failure", error);
+        setError(error.message || "MSG91 Widget Error");
+        setMsg91Verifying(false);
+      },
+    };
+
+    const urls = [
+      'https://verify.msg91.com/otp-provider.js',
+      'https://verify.phone91.com/otp-provider.js'
+    ];
+    let i = 0;
+    function attempt() {
+        if (document.getElementById('msg91-script')) return; // Already loading
+        const s = document.createElement('script');
+        s.id = 'msg91-script';
+        s.src = urls[i];
+        s.async = true;
+        s.onload = () => {
+            if (typeof window.initSendOTP === 'function') {
+                window.initSendOTP(configuration);
+            }
+        };
+        s.onerror = () => {
+            i++;
+            if (i < urls.length) {
+                attempt();
+            }
+        };
+        document.head.appendChild(s);
+    }
+    attempt();
+  }, []);
 
   const sendOtpMutation = useSendOtp({
     mutation: {
@@ -43,20 +125,48 @@ export default function CustomerLogin() {
     },
   });
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (phone.length < 10) {
       setError("Enter a valid 10-digit mobile number.");
       return;
     }
-    sendOtpMutation.mutate({ data: { phone } });
+    
+    if (window.sendOtp) {
+      try {
+        const response = await window.sendOtp({ identifier: "91" + phone });
+        console.log("MSG91 send response", response);
+        if (response.message) {
+          setReqId(response.message);
+        }
+        setStep("otp");
+      } catch (err: any) {
+        setError(err.message || "Failed to send OTP via MSG91");
+      }
+    } else {
+      // Fallback if MSG91 is blocked/down
+      sendOtpMutation.mutate({ data: { phone } });
+    }
   };
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    verifyOtpMutation.mutate({ data: { phone, otp } });
+    
+    if (window.verifyOtp && reqId) {
+      setMsg91Verifying(true);
+      try {
+        await window.verifyOtp({ otp, reqId });
+        // The success callback in configuration will handle the rest!
+      } catch (err: any) {
+        setMsg91Verifying(false);
+        setError(err.message || "Invalid OTP");
+      }
+    } else {
+      // Fallback
+      verifyOtpMutation.mutate({ data: { phone, otp } });
+    }
   };
 
   return (
@@ -160,10 +270,10 @@ export default function CustomerLogin() {
 
               <button
                 type="submit"
-                disabled={otp.length !== 6 || verifyOtpMutation.isPending}
+                disabled={otp.length !== 6 || verifyOtpMutation.isPending || msg91Verifying}
                 className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {verifyOtpMutation.isPending ? "Verifying…" : "Verify & Continue →"}
+                {verifyOtpMutation.isPending || msg91Verifying ? "Verifying…" : "Verify & Continue →"}
               </button>
 
               <button

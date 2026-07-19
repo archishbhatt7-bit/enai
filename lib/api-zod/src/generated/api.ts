@@ -15,6 +15,11 @@ export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
 
+export const VerifyMsg91Body = zod.object({
+  "phone": zod.string(),
+  "msg91Token": zod.string()
+})
+
 
 /**
  * @summary Register a new barber shop

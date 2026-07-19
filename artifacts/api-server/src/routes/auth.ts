@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, shopsTable, ownersTable, otpSessionsTable } from "@workspace/db";
 import { eq, lt } from "drizzle-orm";
 import { hashPassword, verifyPassword, generateToken, generateOtp, slugify, revokeToken } from "../lib/auth";
-import { RegisterBarberBody, LoginBarberBody, SendOtpBody, VerifyOtpBody } from "@workspace/api-zod";
+import { RegisterBarberBody, LoginBarberBody, SendOtpBody, VerifyOtpBody, VerifyMsg91Body } from "@workspace/api-zod";
 import { rateLimit } from "express-rate-limit";
 import { sendOtpSms } from "../lib/sms";
 
@@ -194,6 +194,52 @@ router.post("/auth/verify-otp", async (req, res) => {
 
   const token = generateToken({ phone, verified: true });
   return res.json({ verified: true, token });
+});
+
+// POST /auth/verify-msg91
+router.post("/auth/verify-msg91", async (req, res) => {
+  const parsed = VerifyMsg91Body.safeParse(req.body);
+  if (!parsed.success) {
+    const field = parsed.error.errors[0]?.path.join(".");
+    const msg = parsed.error.errors[0]?.message;
+    return res.status(400).json({ error: field ? `Invalid input for ${field}: ${msg}` : "Invalid input" });
+  }
+  const { phone, msg91Token } = parsed.data;
+
+  // Ensure MSG91_AUTH_KEY is provided, else fallback to standard dev mode
+  const authKey = process.env.MSG91_AUTH_KEY;
+  if (!authKey) {
+    req.log.warn("MSG91_AUTH_KEY is missing. Treating MSG91 verification as SUCCESS for demo purposes.");
+    const token = generateToken({ phone, verified: true });
+    return res.json({ verified: true, token });
+  }
+
+  try {
+    const response = await fetch("https://control.msg91.com/api/v5/widget/verifyAccessToken", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        authkey: authKey,
+        "access-token": msg91Token,
+      }),
+    });
+
+    const data = await response.json();
+    
+    // MSG91 returns { type: "success", message: "Token verified successfully." }
+    if (data.type === "success" || data.type === "Success") {
+      const token = generateToken({ phone, verified: true });
+      return res.json({ verified: true, token });
+    } else {
+      req.log.error({ msg91Response: data }, "MSG91 Verification failed");
+      return res.status(400).json({ error: "Invalid OTP token" });
+    }
+  } catch (err) {
+    req.log.error(err, "MSG91 API error");
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // POST /auth/logout
