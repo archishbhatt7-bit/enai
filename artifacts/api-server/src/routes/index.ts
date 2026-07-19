@@ -6,7 +6,7 @@ import servicesRouter from "./services.js";
 import bookingsRouter from "./bookings.js";
 import storageRouter from "./storage.js";
 import barbersRouter from "./barbers.js";
-import { adminRouter } from "./admin/index.js";
+import { adminRouter } from "./admin.js";
 
 const router: IRouter = Router();
 
