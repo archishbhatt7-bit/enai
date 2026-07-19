@@ -1,5 +1,5 @@
 // Force Vercel redeploy 1
-import app from "./app.js";
+import app from "./expressApp.js";
 import { logger } from "./lib/logger.js";
 
 const rawPort = process.env["PORT"];
