@@ -5,6 +5,9 @@
   "functions": {
     "api/index.mjs": {
       "includeFiles": "dist/**"
+    },
+    "index.mjs": {
+      "includeFiles": "dist/**"
     }
   },
   "rewrites": [
