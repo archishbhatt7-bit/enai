@@ -226,7 +226,7 @@ router.post("/auth/verify-msg91", async (req, res) => {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as { type?: string; message?: string; [key: string]: any };
     
     // MSG91 returns { type: "success", message: "Token verified successfully." }
     if (data.type === "success" || data.type === "Success") {
