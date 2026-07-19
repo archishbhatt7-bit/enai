@@ -151,14 +151,14 @@ export default function CustomerLogin() {
     e.preventDefault();
     setError("");
     
-    if (window.verifyOtp && reqId) {
+    if (window.verifyOtp) {
       setMsg91Verifying(true);
       try {
-        await window.verifyOtp({ otp, reqId });
-        // The success callback in configuration will handle the rest!
+        window.verifyOtp(otp);
+        // The success/failure callbacks in configuration will handle the rest!
       } catch (err: any) {
         setMsg91Verifying(false);
-        setError(err.message || "Invalid OTP");
+        setError(err?.message || (typeof err === "string" ? err : "Invalid OTP"));
       }
     } else {
       // Fallback
