@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db, shopsTable, servicesTable, bookingsTable, ownersTable } from "@workspace/db";
 import { eq, and, ilike, or, gte, lte, sql } from "drizzle-orm";
-import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
+import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth.js";
 import { CreateShopBody, UpdateShopStatusBody, UpdateShopSettingsBody } from "@workspace/api-zod";
-import { slugify } from "../lib/auth";
+import { slugify } from "../lib/auth.js";
 
 const router = Router();
 

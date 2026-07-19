@@ -5,7 +5,7 @@ import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
-import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
+import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth.js";
 import { db, photoStoreTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 

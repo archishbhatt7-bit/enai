@@ -2,7 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import { db, shopsTable, ownersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { generateToken, verifyToken } from "../lib/auth";
+import { generateToken, verifyToken } from "../lib/auth.js";
 
 export const adminRouter = Router();
 

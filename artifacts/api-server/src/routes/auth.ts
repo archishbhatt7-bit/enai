@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { db, shopsTable, ownersTable, otpSessionsTable } from "@workspace/db";
 import { eq, lt } from "drizzle-orm";
-import { hashPassword, verifyPassword, generateToken, generateOtp, slugify, revokeToken } from "../lib/auth";
+import { hashPassword, verifyPassword, generateToken, generateOtp, slugify, revokeToken } from "../lib/auth.js";
 import { RegisterBarberBody, LoginBarberBody, SendOtpBody, VerifyOtpBody, VerifyMsg91Body } from "@workspace/api-zod";
 import { rateLimit } from "express-rate-limit";
-import { sendOtpSms } from "../lib/sms";
+import { sendOtpSms } from "../lib/sms.js";
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, ownersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth";
+import { requireOwnerAuth, OwnerAuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 

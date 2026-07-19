@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db, shopsTable, servicesTable, bookingsTable } from "@workspace/db";
 import { eq, and, inArray, gte } from "drizzle-orm";
-import { getAvailableSlots, assignChair, addMinutes } from "../lib/slots";
-import { generateOtp } from "../lib/auth";
-import { requireOwnerAuth, OwnerAuthRequest, requireCustomerAuth, CustomerAuthRequest } from "../middleware/auth";
+import { getAvailableSlots, assignChair, addMinutes } from "../lib/slots.js";
+import { generateOtp } from "../lib/auth.js";
+import { requireOwnerAuth, OwnerAuthRequest, requireCustomerAuth, CustomerAuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 

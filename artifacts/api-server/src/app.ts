@@ -2,9 +2,9 @@ import express, { type Express } from "express";
 import cors from "cors";
 import helmetImport from "helmet";
 import pinoHttpImport from "pino-http";
-import router from "./routes";
-import { logger } from "./lib/logger";
-import { rateLimit } from "./middleware/rateLimit";
+import router from "./routes/index.js";
+import { logger } from "./lib/logger.js";
+import { rateLimit } from "./middleware/rateLimit.js";
 
 // Vercel's strict TS runner treats these as namespaces rather than callable functions 
 // because it overrides or ignores our esModuleInterop flags. 
