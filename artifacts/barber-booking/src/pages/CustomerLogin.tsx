@@ -42,7 +42,7 @@ export default function CustomerLogin() {
   const doMsg91Verify = async (msg91Token: string) => {
     setMsg91Verifying(true);
     try {
-      const data = await customFetch<{ verified: boolean; token?: string; error?: string }>("/auth/verify-msg91", {
+      const data = await customFetch<{ verified: boolean; token?: string; error?: string }>("/api/auth/verify-msg91", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: phoneRef.current, msg91Token }),
