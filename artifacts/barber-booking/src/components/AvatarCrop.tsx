@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { X, Check, ZoomIn, ZoomOut, Upload } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
+const apiBase = import.meta.env.VITE_API_URL || "";
+
 interface AvatarCropProps {
   onCropped: (blob: Blob, objectUrl: string) => void;
   onClose: () => void;

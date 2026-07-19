@@ -63,9 +63,9 @@ function ShopCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-4 flex-1 min-w-0">
-          {shop.profilePhoto ? (
+          {(shop.profilePhoto || (shop as any).interiorPhotos?.[0]) ? (
             <img
-              src={photoUrl(shop.profilePhoto)}
+              src={photoUrl(shop.profilePhoto || (shop as any).interiorPhotos?.[0])}
               alt={shop.shopName}
               className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-slate-100"
             />

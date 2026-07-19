@@ -230,8 +230,16 @@ router.post("/auth/verify-msg91", async (req, res) => {
     
     // MSG91 returns { type: "success", message: "Token verified successfully." }
     if (data.type === "success" || data.type === "Success") {
-      const token = generateToken({ phone, verified: true });
-      return res.json({ verified: true, token });
+      // MSG91 response typically includes the verified mobile number
+      let verifiedPhone = phone;
+      if (data.mobile) {
+        // Normalize mobile (remove country code if needed, assuming Indian +91 for now)
+        verifiedPhone = data.mobile.startsWith("91") && data.mobile.length === 12 
+          ? data.mobile.substring(2) 
+          : data.mobile;
+      }
+      const token = generateToken({ phone: verifiedPhone, verified: true });
+      return res.json({ verified: true, token, phone: verifiedPhone });
     } else {
       req.log.error({ msg91Response: data }, "MSG91 Verification failed");
       return res.status(400).json({ error: "Invalid OTP token" });

@@ -506,10 +506,15 @@ export default function ShopPage() {
               {services.filter((s) => s.isActive).map((service) => (
                 <button
                   key={service.id}
+                  type="button"
                   disabled={shopClosed}
                   onClick={() => {
                     setSelectedService(service.id);
                     setStep("slot");
+                    // Scroll to booking panel on mobile so user sees the next step
+                    setTimeout(() => {
+                      document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
                   }}
                   className={`text-left border-2 rounded-3xl p-5 transition-all group disabled:opacity-50 disabled:cursor-not-allowed ${
                     selectedService === service.id 
@@ -538,7 +543,7 @@ export default function ShopPage() {
         </div>
 
         {/* Right Column: Sticky Booking Panel */}
-        <div className="lg:col-span-5 relative">
+        <div className="lg:col-span-5 relative" id="booking-panel">
           <div className="sticky top-24">
             
             {step === "service" ? (

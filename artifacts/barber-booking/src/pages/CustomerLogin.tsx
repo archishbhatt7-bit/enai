@@ -32,6 +32,7 @@ export default function CustomerLogin() {
   const [error, setError] = useState("");
   const [reqId, setReqId] = useState<string | null>(null);
   const [msg91Verifying, setMsg91Verifying] = useState(false);
+  const otpProvider = import.meta.env.VITE_OTP_PROVIDER || "internal";
 
   const phoneRef = useRef(phone);
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function CustomerLogin() {
          setError(data.error || "Verification failed on backend");
       }
     } catch (e: any) {
-      setError(e.message || "Network error during verification");
+      setError(e?.message || (typeof e === "string" ? e : "Network error during verification"));
     } finally {
       setMsg91Verifying(false);
     }
@@ -72,7 +73,7 @@ export default function CustomerLogin() {
       },
       failure: (error: any) => {
         console.log("MSG91 failure", error);
-        setError(error.message || "MSG91 Widget Error");
+        setError(error?.message || (typeof error === "string" ? error : "MSG91 Widget Error"));
         setMsg91Verifying(false);
       },
     };
@@ -142,7 +143,7 @@ export default function CustomerLogin() {
         }
         setStep("otp");
       } catch (err: any) {
-        setError(err.message || "Failed to send OTP via MSG91");
+        setError(err?.message || (typeof err === "string" ? err : "Failed to send OTP via MSG91"));
       }
     } else {
       // Fallback if MSG91 is blocked/down
@@ -200,36 +201,42 @@ export default function CustomerLogin() {
               </div>
             )}
 
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Mobile Number
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    <span className="text-slate-400 font-semibold text-sm">+91</span>
-                    <div className="w-px h-5 bg-slate-200" />
-                  </div>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    placeholder="98765 43210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="w-full pl-16 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-semibold text-lg focus:outline-none focus:border-blue-600 tracking-widest"
-                  />
-                </div>
+            {otpProvider === "msg91" ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <Msg91Widget onSuccess={handleMsg91Success} />
               </div>
+            ) : (
+              <form onSubmit={handleSendOtp} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                      <span className="text-slate-400 font-semibold text-sm">+91</span>
+                      <div className="w-px h-5 bg-slate-200" />
+                    </div>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="98765 43210"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      className="w-full pl-16 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-slate-900 font-semibold text-lg focus:outline-none focus:border-blue-600 tracking-widest"
+                    />
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={phone.length < 10 || sendOtpMutation.isPending}
-                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-              >
-                {sendOtpMutation.isPending ? "Sending…" : "Send OTP →"}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={phone.length < 10 || sendOtpMutation.isPending}
+                  className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                >
+                  {sendOtpMutation.isPending ? "Sending…" : "Send OTP →"}
+                </button>
+              </form>
+            )}
           </>
         )}
 

@@ -43,7 +43,8 @@ export default function Register() {
       return;
     }
 
-    registerMutation.mutate({ data: form });
+    // @ts-expect-error generated type mismatch with latest openapi
+    registerMutation.mutate({ data: { ...form, otp: "" } });
   };
 
   return (
