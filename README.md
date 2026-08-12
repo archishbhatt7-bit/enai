@@ -4,7 +4,7 @@ eNai is a modern, full-stack web application designed to connect customers with 
 
 > *Note: This project was scaffolded with AI-assisted tooling to accelerate boilerplate and infrastructure setup. The core logic, database modeling, payment integrations, and authentication flows were implemented and are fully understood by the author.*
 
-## 🚀 Tech Stack
+##  Tech Stack
 
 ### Frontend
 - **Framework:** React 19 + Vite
@@ -27,7 +27,7 @@ eNai is a modern, full-stack web application designed to connect customers with 
 - **Package Manager:** pnpm workspaces
 - **Validation:** Zod (Shared contracts between frontend/backend)
 
-## 📦 Project Structure
+##  Project Structure
 
 The repository is structured as a monorepo using pnpm workspaces:
 
@@ -37,7 +37,7 @@ The repository is structured as a monorepo using pnpm workspaces:
 - `lib/api-zod/` - Shared Zod validation schemas.
 - `lib/api-client-react/` - Auto-generated React Query hooks for the API.
 
-## 🛠️ How to Run Locally
+##  How to Run Locally
 
 ### Prerequisites
 - Node.js 20+
@@ -65,7 +65,7 @@ The repository is structured as a monorepo using pnpm workspaces:
    ```
    This will start both the Express backend and the Vite frontend concurrently.
 
-## 💳 Key Features
+##  Key Features
 
 - **OTP Authentication:** Secure, passwordless customer login via MSG91.
 - **Role-Based Access:** Distinct interfaces for Customers and Shop Owners/Admins.
