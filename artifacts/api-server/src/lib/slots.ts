@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { bookingsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 const BUFFER_MINUTES = 10;
 const ADVANCE_BOOKING_HOURS = 2;
@@ -114,6 +114,8 @@ export async function assignChair(
   slotTime: string,
   slotEndTime: string,
 ): Promise<number | null> {
+  // FOR UPDATE acquires row-level locks so a concurrent transaction
+  // blocks until this one commits, preventing double-booking.
   const existingBookings = await dbOrTx
     .select()
     .from(bookingsTable)
@@ -122,7 +124,8 @@ export async function assignChair(
         eq(bookingsTable.shopId, shopId),
         eq(bookingsTable.slotDate, date),
       )
-    );
+    )
+    .for("update");
 
   const activeBookings = existingBookings.filter(
     (b: any) => !["cancelled", "no_show"].includes(b.status)

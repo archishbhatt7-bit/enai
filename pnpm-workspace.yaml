@@ -45,9 +45,7 @@ catalog:
   drizzle-orm: ^0.45.2
   framer-motion: ^12.42.2
   lucide-react: ^0.545.0
-  # Must be this exact version because expo requires it
   react: 19.1.0
-  # Must be this exact version because expo requires it
   react-dom: 19.1.0
   tailwind-merge: ^3.6.0
   tailwindcss: ^4.3.2
@@ -69,4 +67,4 @@ allowBuilds:
   "@swc/core": true
   msw: true
   unrs-resolver: true
-  bcrypt: set this to true or false
+  bcrypt: true

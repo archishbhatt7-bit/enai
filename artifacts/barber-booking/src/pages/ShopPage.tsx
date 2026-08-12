@@ -3,9 +3,7 @@ import { useParams, useLocation } from "wouter";
 import {
   useGetShop,
   useGetAvailableSlots,
-  useSendOtp,
-  useVerifyOtp,
-  useCreateBooking,
+  customFetch,
 } from "@workspace/api-client-react";
 import {
   Scissors,
@@ -26,7 +24,7 @@ import {
 import { photoUrl } from "@/components/ImageUpload";
 import { useCustomerAuth } from "@/lib/customerAuth";
 
-declare global { interface Window { L: any; } }
+declare global { interface Window { L: any; Razorpay: any; } }
 
 const DAY_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const FULL_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -210,7 +208,7 @@ function formatDisplayDate(d: Date) {
   return `${DAY_ABBR[d.getDay()]}, ${d.getDate()} ${d.toLocaleString("en-IN", { month: "short" })}`;
 }
 
-type BookingStep = "service" | "slot" | "payment" | "contact" | "otp" | "confirm";
+type BookingStep = "service" | "slot" | "contact" | "payment" | "confirm";
 
 export default function ShopPage() {
   const params = useParams<{ slug: string }>();
@@ -242,6 +240,7 @@ export default function ShopPage() {
   const [error, setError] = useState("");
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [finalBooking, setFinalBooking] = useState<any>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   function playSuccessSound() {
@@ -286,46 +285,125 @@ export default function ShopPage() {
     { query: { enabled: !!selectedService && step === "slot" } as any }
   );
 
-  const createBookingMutation = useCreateBooking({
-    mutation: {
-      onSuccess: (data) => {
-        setFinalBooking(data);
-        setStep("confirm");
-      },
-      onError: (err: any) => {
-        if (err?.status === 401) {
-          logoutCustomer();
-          setError("Your session has expired. Please log in again.");
-          setTimeout(() => navigate(`/customer-login?redirect=/shop/${slug}`), 1500);
-          return;
-        }
-        setError(err?.data?.error || "Booking failed. Please try again.");
-        setStep("contact");
-      },
-    },
-  });
-
-  const handleCreateBooking = () => {
+  // Razorpay payment flow
+  const handlePayAndBook = async () => {
     if (!customerName.trim() || !customerPhone.trim()) {
       setError("Please fill in your name and phone number.");
       return;
     }
-    if (customerPhone.length < 10) {
-      setError("Please enter a valid 10-digit phone number.");
-      return;
-    }
     setError("");
-    createBookingMutation.mutate({
-      slug,
-      data: {
-        customerName,
-        customerPhone,
-        serviceId: selectedService!,
-        slotDate: selectedDate,
-        slotTime: selectedTime!,
-        paymentType,
-      },
-    });
+    setPaymentLoading(true);
+
+    try {
+      // Step 1: Create Razorpay order on backend (amount from DB, not client)
+      const orderData = await customFetch<{
+        orderId: string;
+        amount: number;
+        currency: string;
+        keyId: string;
+        devMode?: boolean;
+      }>("/api/payments/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          serviceId: selectedService!,
+          paymentType,
+        }),
+      });
+
+      // Dev mode: skip Razorpay modal, go straight to verify
+      if (orderData.devMode) {
+        const booking = await customFetch<any>("/api/payments/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razorpay_payment_id: "pay_dev_" + Date.now(),
+            razorpay_order_id: orderData.orderId,
+            razorpay_signature: "dev_mode_signature",
+            slug,
+            customerName,
+            serviceId: selectedService!,
+            slotDate: selectedDate,
+            slotTime: selectedTime!,
+            paymentType,
+          }),
+        });
+        setFinalBooking(booking);
+        setStep("confirm");
+        setPaymentLoading(false);
+        return;
+      }
+
+      // Step 2: Open Razorpay checkout modal
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: shop?.shopName || "eNai",
+        description: `${selectedServiceObj?.name || "Booking"} — ${paymentType === "token" ? "₹5 platform fee" : "Full payment"}`,
+        order_id: orderData.orderId,
+        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          try {
+            // Step 3: Verify payment and create booking
+            const booking = await customFetch<any>("/api/payments/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                slug,
+                customerName,
+                serviceId: selectedService!,
+                slotDate: selectedDate,
+                slotTime: selectedTime!,
+                paymentType,
+              }),
+            });
+            setFinalBooking(booking);
+            setStep("confirm");
+          } catch (err: any) {
+            if (err?.status === 401) {
+              logoutCustomer();
+              setError("Your session has expired. Please log in again.");
+              setTimeout(() => navigate(`/customer-login?redirect=/shop/${slug}`), 1500);
+              return;
+            }
+            setError(err?.data?.error || "Payment verification failed. Please try again.");
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentLoading(false);
+          },
+        },
+        prefill: {
+          contact: customerPhone,
+        },
+        theme: {
+          color: "#1e293b",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (response: any) => {
+        setError(response.error?.description || "Payment failed. Please try again.");
+        setPaymentLoading(false);
+      });
+      rzp.open();
+    } catch (err: any) {
+      if (err?.status === 401) {
+        logoutCustomer();
+        setError("Your session has expired. Please log in again.");
+        setTimeout(() => navigate(`/customer-login?redirect=/shop/${slug}`), 1500);
+      } else {
+        setError(err?.data?.error || err?.message || "Failed to initiate payment. Please try again.");
+      }
+      setPaymentLoading(false);
+    }
   };
 
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -564,7 +642,7 @@ export default function ShopPage() {
                     
                     <div className="flex items-center justify-between mb-2">
                        <h2 className="text-xl font-black tracking-tight relative z-10">
-                         {step === "slot" ? "Pick a Time" : step === "payment" ? "Payment Option" : step === "contact" ? "Your Details" : "Verification"}
+                         {step === "slot" ? "Pick a Time" : step === "contact" ? "Your Details" : step === "payment" ? "Payment Option" : "Verification"}
                        </h2>
                        <button onClick={() => setStep("service")} className="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full relative z-10">
                          <X className="w-4 h-4" />
@@ -573,8 +651,8 @@ export default function ShopPage() {
 
                     {/* Progress Bar Indicators */}
                     <div className="flex items-center gap-1.5 mt-6 relative z-10">
-                      {(["slot", "payment", "contact", "confirm"] as BookingStep[]).map((s, i) => {
-                        const stepOrder = ["slot", "payment", "contact", "confirm"];
+                      {(["slot", "contact", "payment", "confirm"] as BookingStep[]).map((s, i) => {
+                        const stepOrder = ["slot", "contact", "payment", "confirm"];
                         const currentIdx = stepOrder.indexOf(step);
                         const thisIdx = stepOrder.indexOf(s);
                         const done = currentIdx > thisIdx;
@@ -705,10 +783,10 @@ export default function ShopPage() {
                             <div className="mt-8">
                               <button
                                 disabled={!selectedTime}
-                                onClick={() => setStep("payment")}
+                                onClick={() => setStep("contact")}
                                 className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-900/20"
                               >
-                                Continue to Payment
+                                Continue
                               </button>
                             </div>
                           </>
@@ -717,11 +795,79 @@ export default function ShopPage() {
                     </div>
                   )}
 
-                  {/* STEP: PAYMENT */}
+                  {/* STEP: CONTACT (now before payment) */}
+                  {step === "contact" && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                      {error && <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm font-bold">{error}</div>}
+
+                      <div className="bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
+                            <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDisplayDate(new Date(selectedDate + "T12:00:00"))} at {selectedTime}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6 mb-8">
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">Full Name</label>
+                          <div className="relative">
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                              type="text" placeholder="e.g. Arjun Kumar"
+                              value={customerName} onChange={(e) => setCustomerName(e.target.value)}
+                              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">WhatsApp Number</label>
+                          <div className="relative">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
+                              value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all tracking-wide"
+                            />
+                          </div>
+                          <p className="text-[11px] font-medium text-slate-400 mt-2 flex items-start gap-1">
+                             <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> 
+                             We'll secure this booking under these details.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button onClick={() => setStep("slot")} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-colors">Back</button>
+                        <button
+                          onClick={() => {
+                            if (!customerName.trim() || !customerPhone.trim()) {
+                              setError("Please fill in your name and phone number.");
+                              return;
+                            }
+                            if (customerPhone.length < 10) {
+                              setError("Please enter a valid 10-digit phone number.");
+                              return;
+                            }
+                            setError("");
+                            setStep("payment");
+                          }}
+                          className="w-2/3 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-colors shadow-xl shadow-slate-900/20"
+                        >
+                          Continue to Payment
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP: PAYMENT (now opens Razorpay) */}
                   {step === "payment" && selectedServiceObj && (
                     <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                      
-                      <div className="bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-200">
+                      {error && <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm font-bold">{error}</div>}
+
+                      <div className="bg-slate-50 rounded-2xl p-5 mb-6 border border-slate-200">
                         <div className="flex items-center gap-3">
                           <Calendar className="w-5 h-5 text-blue-600" />
                           <div>
@@ -755,9 +901,9 @@ export default function ShopPage() {
                         >
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="font-black text-slate-900 text-base">Full Payment</p>
+                              <p className="font-black text-slate-900 text-base">Full Prepaid</p>
                               <p className="text-3xl font-black text-slate-900 mt-2 tracking-tight">₹{selectedServiceObj.price}</p>
-                              <p className="text-xs text-slate-500 font-medium mt-3">Pay full amount securely online right now.</p>
+                              <p className="text-xs text-slate-500 font-medium mt-3">Pay full amount online as deposit. Barber confirms at arrival.</p>
                               <p className="text-[10px] uppercase tracking-widest text-green-600 font-bold mt-2">₹0 platform fee</p>
                             </div>
                             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center mt-1 transition-colors ${paymentType === "full" ? "border-blue-600 bg-blue-600" : "border-slate-300"}`}>
@@ -767,51 +913,18 @@ export default function ShopPage() {
                         </button>
                       </div>
 
-                      <div className="flex gap-3 mt-8">
-                        <button onClick={() => setStep("slot")} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-colors">Back</button>
-                        <button onClick={() => setStep("contact")} className="w-2/3 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-colors shadow-xl shadow-slate-900/20">Next Step</button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* STEP: CONTACT */}
-                  {step === "contact" && (
-                    <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                      {error && <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm font-bold">{error}</div>}
-
-                      <div className="space-y-6 mb-8">
-                        <div>
-                          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">Full Name</label>
-                          <div className="relative">
-                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                            <input
-                              type="text" placeholder="e.g. Arjun Kumar"
-                              value={customerName} onChange={(e) => setCustomerName(e.target.value)}
-                              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">WhatsApp Number</label>
-                          <div className="relative">
-                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                            <input
-                              type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit number"
-                              value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                              className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all tracking-wide"
-                            />
-                          </div>
-                          <p className="text-[11px] font-medium text-slate-400 mt-2 flex items-start gap-1">
-                             <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" /> 
-                             We'll secure this booking under these details.
-                          </p>
-                        </div>
-                      </div>
-
                       <div className="flex gap-3">
-                        <button onClick={() => setStep("payment")} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-colors">Back</button>
-                        <button onClick={handleCreateBooking} disabled={createBookingMutation.isPending} className="w-2/3 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-slate-800 transition-colors shadow-xl shadow-slate-900/20 disabled:opacity-60">
-                          {createBookingMutation.isPending ? "Booking..." : "Confirm Booking"}
+                        <button onClick={() => setStep("contact")} className="w-1/3 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-sm hover:bg-slate-200 transition-colors">Back</button>
+                        <button
+                          onClick={handlePayAndBook}
+                          disabled={paymentLoading}
+                          className="w-2/3 bg-blue-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-blue-500 transition-colors shadow-xl shadow-blue-600/20 disabled:opacity-60 flex items-center justify-center gap-2"
+                        >
+                          {paymentLoading ? (
+                            <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Processing...</>
+                          ) : (
+                            <>Pay ₹{paymentType === "token" ? 5 : selectedServiceObj.price} & Book</>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -843,7 +956,7 @@ export default function ShopPage() {
                           </div>
                           <div className="flex justify-between items-center border-b border-slate-200 pb-4">
                             <span className="text-slate-500">Payment</span>
-                            <span className="font-black text-green-600">₹{paymentType === "token" ? 1 : selectedServiceObj?.price} paid</span>
+                            <span className="font-black text-green-600">₹{paymentType === "token" ? 5 : selectedServiceObj?.price} paid</span>
                           </div>
                         </div>
                         <div className="mt-5 p-4 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3">
