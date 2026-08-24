@@ -14,9 +14,12 @@ if (!ADMIN_PASSWORD) {
 // Admin Login
 adminRouter.post("/login", (req, res) => {
   const { password } = req.body;
-  const isValid = typeof password === "string" &&
-    password.length === ADMIN_PASSWORD.length &&
-    crypto.timingSafeEqual(Buffer.from(password), Buffer.from(ADMIN_PASSWORD));
+  let isValid = false;
+  if (typeof password === "string") {
+    const inputHash = crypto.createHash("sha256").update(password).digest();
+    const expectedHash = crypto.createHash("sha256").update(ADMIN_PASSWORD).digest();
+    isValid = crypto.timingSafeEqual(inputHash, expectedHash);
+  }
   if (isValid) {
     const token = generateToken({ admin: true });
     return res.json({ token });
