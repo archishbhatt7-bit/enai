@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { CustomerAuthProvider } from "@/lib/customerAuth";
-import SplashScreen from "@/components/SplashScreen";
 import Landing from "@/pages/Landing";
 import CustomerLogin from "@/pages/CustomerLogin";
 import CustomerHome from "@/pages/CustomerHome";
@@ -75,21 +74,11 @@ function Router() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(
-    () => !sessionStorage.getItem("slotcut_splash_shown")
-  );
-
-  const handleSplashDone = () => {
-    sessionStorage.setItem("slotcut_splash_shown", "1");
-    setShowSplash(false);
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CustomerAuthProvider>
           <TooltipProvider>
-            {showSplash && <SplashScreen onDone={handleSplashDone} />}
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>
