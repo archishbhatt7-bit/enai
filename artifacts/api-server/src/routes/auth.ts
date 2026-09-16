@@ -158,7 +158,12 @@ router.post("/auth/send-otp", authLimiter, async (req, res) => {
 
   req.log.info({ phone }, "OTP generated and sent via SMS");
 
-  return res.json({ success: true, message: "OTP sent via SMS", otp }); // Return OTP for demo mode
+  // Only return OTP in non-production for dev/demo convenience
+  const response: Record<string, unknown> = { success: true, message: "OTP sent via SMS" };
+  if (process.env.NODE_ENV !== "production") {
+    response.otp = otp;
+  }
+  return res.json(response);
 });
 
 // POST /auth/verify-otp

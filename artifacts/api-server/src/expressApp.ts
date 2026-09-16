@@ -57,12 +57,15 @@ app.use("/api", router);
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   req.log.error(err, "Unhandled error");
-  
-  // Extract Postgres driver error details if present
-  const pgError = err.cause || err;
-  const dbErrorDetails = pgError ? { code: pgError.code, message: pgError.message, detail: pgError.detail } : null;
 
-  res.status(500).json({ error: "Internal Server Error", dbError: dbErrorDetails, details: err.message, stack: err.stack });
+  if (process.env.NODE_ENV === "production") {
+    res.status(500).json({ error: "Internal Server Error" });
+  } else {
+    // In development, include details for debugging
+    const pgError = err.cause || err;
+    const dbErrorDetails = pgError ? { code: pgError.code, message: pgError.message, detail: pgError.detail } : null;
+    res.status(500).json({ error: "Internal Server Error", dbError: dbErrorDetails, details: err.message, stack: err.stack });
+  }
 });
 
 export default app;
