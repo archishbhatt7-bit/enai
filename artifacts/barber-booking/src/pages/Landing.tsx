@@ -1,92 +1,125 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { User, Store, Scissors, ArrowRight } from "lucide-react";
+import { Search, MapPin, Star, ArrowRight, Scissors } from "lucide-react";
+import BrandMark from "@/components/BrandMark";
+import { useListShops } from "@workspace/api-client-react";
+import { photoUrl } from "@/components/ImageUpload";
 
 export default function Landing() {
   const [, navigate] = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: shops = [] } = useListShops();
+  const popularShops = shops.slice(0, 3); // Just pick first 3 for demo
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // For now, any search requires login, then they can search on the customer dashboard
+    navigate("/customer-login");
+  };
 
   return (
-    <div className="relative min-h-screen bg-[#020617] flex flex-col font-sans select-none overflow-hidden">
-      
-      {/* Background Decorators - Deep Space Blue & Indigo Glows */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-600/20 via-indigo-900/10 to-transparent pointer-events-none blur-[100px]" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-blue-500/10 via-slate-900/20 to-transparent pointer-events-none blur-[100px]" />
-
-      {/* Top Navbar */}
-      <header className="relative z-10 px-6 py-6 sm:px-10 lg:px-16 flex items-center justify-between max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-white/10 backdrop-blur-xl border border-white/10 rounded-xl flex items-center justify-center shadow-lg">
-            <Scissors className="w-5 h-5 text-blue-400" />
-          </div>
-          <span className="text-2xl font-black text-white tracking-tight">eNai</span>
-        </div>
+    <div className="min-h-screen bg-[#faf8f5] text-slate-900 font-sans flex flex-col">
+      {/* Header */}
+      <header className="px-6 py-5 sm:px-10 lg:px-12 flex items-center justify-between max-w-7xl mx-auto w-full">
+        <BrandMark withWordmark className="text-xl" />
+        <button 
+          onClick={() => navigate("/login")}
+          className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+        >
+          Barber login
+        </button>
       </header>
 
-      {/* Main Content Area */}
-      <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center lg:justify-between px-6 sm:px-10 lg:px-16 max-w-7xl mx-auto w-full gap-12 lg:gap-20 pb-12">
-        
-        {/* Left Side: Hero */}
-        <div className="flex-1 text-center lg:text-left mt-10 lg:mt-0 max-w-2xl">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black text-white leading-[1.1] tracking-tight mb-6 drop-shadow-sm">
-            Elevate Your <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 inline-block mt-2">Grooming Experience</span>
+      {/* Main Hero */}
+      <main className="flex-1 flex flex-col px-6 sm:px-10 lg:px-12 max-w-7xl mx-auto w-full pt-12 lg:pt-24 pb-20">
+        <div className="max-w-3xl">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.05] tracking-tight text-slate-900">
+            Book your barber.<br />
+            <span className="text-[#E8900C]">Skip the wait.</span>
           </h1>
-          <p className="text-base sm:text-lg text-slate-400 font-medium leading-relaxed max-w-lg mx-auto lg:mx-0">
-            Created for those who appreciate premium quality, time, and a flawless look. Book your next appointment seamlessly with the best barbers near you.
+          <p className="mt-6 text-lg sm:text-xl text-slate-500 font-medium max-w-xl">
+            Find the best local barbershops, choose your service, and reserve your time before you even leave home.
           </p>
+          
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="mt-10 relative max-w-2xl flex items-center">
+            <Search className="absolute left-5 w-6 h-6 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search shops near you..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-14 pr-32 py-5 rounded-2xl bg-white border border-slate-200 text-lg font-medium placeholder-slate-400 focus:outline-none focus:border-[#E8900C] focus:ring-4 focus:ring-[#E8900C]/10 transition-all shadow-sm"
+            />
+            <button 
+              type="submit"
+              className="absolute right-2 top-2 bottom-2 bg-[#E8900C] hover:bg-[#d4820a] text-white px-6 rounded-xl font-bold text-sm transition-colors shadow-md shadow-[#E8900C]/20"
+            >
+              Search
+            </button>
+          </form>
+
+          {/* Quick Cities */}
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Popular</span>
+            {["Ahmedabad", "Mumbai", "Pune", "Bengaluru"].map(city => (
+              <button 
+                key={city}
+                onClick={() => { setSearchQuery(city); }}
+                className="flex items-center gap-1.5 bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:border-[#E8900C] hover:text-[#E8900C] transition-colors"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                {city}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Right Side: Glassmorphism Login Cards */}
-        <div className="w-full max-w-[420px] bg-slate-900/40 backdrop-blur-2xl border border-slate-700/50 p-8 sm:p-10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] flex flex-col relative z-20">
-          
-          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-[2.5rem] pointer-events-none" />
-
-          <div className="mb-8 text-center lg:text-left relative z-10">
-            <h2 className="text-3xl font-black text-white tracking-tight mb-2">Welcome</h2>
-            <p className="text-slate-400 font-medium text-sm">Select an option to continue</p>
+        {/* Popular Near You Section */}
+        {popularShops.length > 0 && (
+          <div className="mt-24">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Popular Near You</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {popularShops.map(shop => (
+                <div key={shop.id} className="bg-white rounded-2xl border border-slate-200 p-5 flex gap-4 hover:shadow-md hover:border-[#E8900C]/50 transition-all cursor-pointer" onClick={() => navigate("/customer-login")}>
+                  {shop.profilePhoto ? (
+                    <img src={photoUrl(shop.profilePhoto)} className="w-20 h-20 rounded-xl object-cover" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+                      <Scissors className="w-8 h-8 text-slate-300" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg text-slate-900 truncate">{shop.shopName}</h3>
+                    <p className="text-sm text-slate-500 font-medium flex items-center gap-1 mt-1 truncate">
+                      <MapPin className="w-3.5 h-3.5" /> {shop.city}
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-xs font-bold bg-green-50 text-green-700 px-2 py-1 rounded-md">
+                        <Star className="w-3.5 h-3.5 fill-green-700 text-green-700" />
+                        4.8
+                      </span>
+                      {shop.minPrice !== null && (
+                        <span className="text-xs font-semibold text-slate-500">
+                          from ₹{shop.minPrice}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
 
-          <div className="flex flex-col gap-4 relative z-10">
-            <button
-              onClick={() => navigate("/customer-login")}
-              className="w-full flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-3xl px-6 py-5 transition-all shadow-lg shadow-blue-900/50 group border border-blue-500/50"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform border border-white/10">
-                  <User className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-lg leading-tight">Customer</p>
-                  <p className="text-[11px] text-blue-100 font-medium leading-tight mt-1 uppercase tracking-wider">Book an Appointment</p>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-            </button>
-
-            <button
-              onClick={() => navigate("/login")}
-              className="w-full flex items-center justify-between bg-slate-800/50 hover:bg-slate-700/50 backdrop-blur-xl border border-slate-600/50 text-white rounded-3xl px-6 py-5 transition-all shadow-lg group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-slate-900/50 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner group-hover:scale-105 transition-transform border border-slate-700/50">
-                  <Store className="w-6 h-6 text-blue-400" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-lg leading-tight">Barber Shop</p>
-                  <p className="text-[11px] text-slate-400 font-bold leading-tight mt-1 uppercase tracking-wider">Manage your business</p>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
-            </button>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-slate-700/50 text-center relative z-10">
-            <p className="text-slate-400 text-sm font-medium">
-              Are you a new barber?{" "}
-              <button onClick={() => navigate("/register")} className="text-blue-400 font-bold hover:text-blue-300 transition-colors drop-shadow-md">
-                Register your shop →
-              </button>
-            </p>
-          </div>
+        <div className="mt-auto pt-24 text-center pb-8">
+           <button onClick={() => navigate("/customer-login")} className="group inline-flex items-center gap-3 bg-[#1a1d23] text-white px-8 py-4 rounded-xl font-bold text-base hover:bg-[#2d313a] transition-all shadow-lg shadow-black/10">
+             Continue as Customer
+             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+           </button>
         </div>
       </main>
     </div>

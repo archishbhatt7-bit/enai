@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useListShops, useGetAllCustomerBookings, useCancelCustomerBooking } from "@workspace/api-client-react";
 import { useCustomerAuth } from "@/lib/customerAuth";
-import { Search, MapPin, Users, Scissors, Star, LogOut, Calendar, Clock, Navigation, User, X, Menu, ArrowLeft } from "lucide-react";
+import { Search, MapPin, Users, Scissors, Star, LogOut, Calendar, Clock, Navigation, User, X } from "lucide-react";
 import CustomerOnboarding, { getCustomerProfile, saveCustomerProfile, type CustomerProfile } from "@/components/CustomerOnboarding";
+import BrandMark from "@/components/BrandMark";
 import { photoUrl } from "@/components/ImageUpload";
 
 import { type ShopSummary } from "@workspace/api-client-react";
@@ -59,7 +60,7 @@ function ShopCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-white rounded-3xl border border-slate-200 p-5 shadow-sm hover:border-blue-400 hover:shadow-md transition-all group"
+      className="w-full text-left rounded-2xl border border-[#ded2c6] bg-[#fffaf5] p-4 shadow-[0_3px_10px_rgba(71,50,37,.05)] transition-all hover:-translate-y-0.5 hover:border-[#b85434] hover:shadow-[0_10px_24px_rgba(71,50,37,.10)]"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex gap-4 flex-1 min-w-0">
@@ -67,17 +68,17 @@ function ShopCard({
             <img
               src={photoUrl(shop.profilePhoto || (shop as any).interiorPhotos?.[0])}
               alt={shop.shopName}
-              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-slate-100"
+              className="h-16 w-16 flex-shrink-0 rounded-xl border border-[#e9ded4] object-cover"
             />
           ) : (
-            <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-              <Scissors className="w-6 h-6 text-blue-600" />
+            <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border border-[#ead8ce] bg-[#f7e6dd]">
+              <Scissors className="h-5 w-5 text-[#a94c30]" />
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h3 className="font-black text-slate-900 text-lg leading-tight">{shop.shopName}</h3>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+              <h3 className="text-base font-semibold leading-tight tracking-[-.02em] text-[#24201d]">{shop.shopName}</h3>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                 shop.isOpen && !shop.isPaused
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-600"
@@ -86,19 +87,19 @@ function ShopCard({
               </span>
             </div>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
+              <span className="flex items-center gap-1 text-sm text-[#756b62]">
                 <MapPin className="w-3.5 h-3.5" /> {shop.city}
               </span>
-              <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
+              <span className="flex items-center gap-1 text-sm text-[#756b62]">
                 <Users className="w-3.5 h-3.5" /> {shop.numChairs} chairs
               </span>
             </div>
             <div className="flex items-center gap-3 mt-3">
               {shop.minPrice != null && (
-                <span className="text-sm font-black text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">from ₹{shop.minPrice}</span>
+                <span className="rounded-lg bg-[#f2ece5] px-2.5 py-1 text-sm font-semibold text-[#403a35]">from ₹{shop.minPrice}</span>
               )}
               {distKm !== null && (
-                <span className="flex items-center gap-1 text-xs font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                <span className="flex items-center gap-1 rounded-lg bg-[#f7e6dd] px-2.5 py-1 text-sm font-semibold text-[#8a4a32]">
                   <Navigation className="w-3.5 h-3.5" /> {distanceLabel(distKm)}
                 </span>
               )}
@@ -108,14 +109,14 @@ function ShopCard({
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={onToggleFav}
-            className={`p-2.5 rounded-xl transition-colors ${
+            className={`rounded-lg p-2.5 transition-colors ${
               isFav
-                ? "text-amber-500 bg-amber-50"
-                : "text-slate-300 hover:text-amber-500 hover:bg-amber-50 bg-slate-50"
+                ? "bg-[#f7e6dd] text-[#b85434]"
+                : "bg-[#f5efe8] text-[#a1968d] hover:bg-[#f7e6dd] hover:text-[#b85434]"
             }`}
             title={isFav ? "Remove from favourites" : "Add to favourites"}
           >
-            <Star className={`w-5 h-5 ${isFav ? "fill-amber-500" : ""}`} />
+            <Star className={`h-5 w-5 ${isFav ? "fill-[#b85434]" : ""}`} />
           </button>
         </div>
       </div>
@@ -125,10 +126,9 @@ function ShopCard({
 
 export default function CustomerHome() {
   const [, navigate] = useLocation();
-  const { phone, logoutCustomer, toggleFavourite, isFavourite, favourites } = useCustomerAuth();
+  const { phone, logoutCustomer, toggleFavourite, isFavourite } = useCustomerAuth();
   
   const [activeTab, setActiveTab] = useState<"home" | "bookings" | "profile">("home");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // --- Home State ---
   const [query, setQuery] = useState("");
@@ -268,194 +268,148 @@ export default function CustomerHome() {
     alert("Profile saved successfully!");
   };
 
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
-
   if (!phone) return null;
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[#f7f2eb] font-sans">
       
       {/* Sidebar (Desktop) */}
-      <aside className="w-72 bg-slate-900 text-white flex-shrink-0 hidden lg:flex flex-col border-r border-slate-800">
-        <div className="p-8 border-b border-slate-800">
+      <aside className="hidden w-72 flex-shrink-0 flex-col border-r border-[#39312c] bg-[#24201d] text-white lg:flex">
+        <div className="border-b border-[#39312c] p-7">
+          <BrandMark tone="paper" withWordmark className="text-xl [&_span:last-child]:text-[#fffaf5]" />
           <div className="flex items-center gap-4">
             {profile?.profilePhoto ? (
-              <img src={photoUrl(profile.profilePhoto)} className="w-14 h-14 rounded-2xl object-cover border-2 border-slate-700 shadow-md" alt="Profile" />
+              <img src={photoUrl(profile.profilePhoto)} className="h-12 w-12 rounded-xl border border-[#5a4f48] object-cover" alt="Profile" />
             ) : (
-              <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-xl shadow-lg border border-blue-500 shadow-blue-900/50">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#b85434] text-lg font-semibold">
                 {profile?.name ? profile.name[0].toUpperCase() : "C"}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-black text-base truncate">{profile?.name || "Customer"}</p>
-              <p className="text-xs text-slate-400 font-bold truncate tracking-wider">+91 {phone}</p>
+              <p className="truncate text-sm font-semibold">{profile?.name || "Customer"}</p>
+              <p className="truncate text-xs text-[#bfb4aa]">+91 {phone}</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 p-5 space-y-2">
-          <button onClick={() => setActiveTab("home")} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-bold text-sm transition-all ${activeTab === 'home' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-            <Search className="w-5 h-5" /> Find Barbers
+        <nav className="flex-1 space-y-1 p-4 pt-6">
+          <button onClick={() => setActiveTab("home")} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-semibold transition-colors ${activeTab === 'home' ? 'bg-[#b85434] text-white' : 'text-[#cfc4ba] hover:bg-[#39312c] hover:text-white'}`}>
+            <Search className="h-4 w-4" /> Discover
           </button>
-          <button onClick={() => setActiveTab("bookings")} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-bold text-sm transition-all ${activeTab === 'bookings' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-            <Calendar className="w-5 h-5" /> My Bookings
+          <button onClick={() => setActiveTab("bookings")} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-semibold transition-colors ${activeTab === 'bookings' ? 'bg-[#b85434] text-white' : 'text-[#cfc4ba] hover:bg-[#39312c] hover:text-white'}`}>
+            <Calendar className="h-4 w-4" /> My bookings
             {upcomingBookings.length > 0 && (
-              <span className="ml-auto bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full">{upcomingBookings.length}</span>
+              <span className="ml-auto rounded-full bg-white/15 px-2 py-0.5 text-[11px]">{upcomingBookings.length}</span>
             )}
           </button>
-          <button onClick={() => setActiveTab("profile")} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-bold text-sm transition-all ${activeTab === 'profile' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-            <User className="w-5 h-5" /> Profile & Settings
+          <button onClick={() => setActiveTab("profile")} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-semibold transition-colors ${activeTab === 'profile' ? 'bg-[#b85434] text-white' : 'text-[#cfc4ba] hover:bg-[#39312c] hover:text-white'}`}>
+            <User className="h-4 w-4" /> Profile
           </button>
         </nav>
 
-        <div className="p-5 border-t border-slate-800">
-          <button onClick={() => { logoutCustomer(); navigate("/"); }} className="w-full flex items-center gap-3 px-5 py-4 text-slate-400 hover:text-red-400 hover:bg-red-950/30 transition-all font-bold text-sm rounded-2xl">
-            <LogOut className="w-5 h-5" /> Sign Out
+        <div className="border-t border-[#39312c] p-4">
+          <button onClick={() => { logoutCustomer(); navigate("/"); }} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-sm font-semibold text-[#cfc4ba] transition-colors hover:bg-[#4a2823] hover:text-[#f7c9ba]">
+            <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
+      <main className="relative flex h-screen flex-1 flex-col overflow-hidden bg-[#f7f2eb]">
         
         {/* Mobile Header */}
-        <header className="lg:hidden bg-white px-5 py-4 flex items-center justify-between border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-          {activeTab !== "home" ? (
-            <button onClick={() => setActiveTab("home")} className="flex items-center gap-2 text-slate-700 font-bold bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Home</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Scissors className="w-6 h-6 text-blue-600" />
-              <span className="font-black text-2xl text-slate-900 tracking-tight">eNai</span>
-            </div>
-          )}
-          <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
-            <Menu className="w-5 h-5 text-slate-700" />
+        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[#ded2c6] bg-[#fffaf5]/95 px-5 py-3 backdrop-blur lg:hidden">
+          <BrandMark withWordmark className="text-xl" />
+          <button onClick={() => setActiveTab("profile")} aria-label="Open profile" className="grid h-11 w-11 place-items-center rounded-xl bg-[#f1e7dd] text-[#8a4a32]">
+            {profile?.profilePhoto ? <img src={photoUrl(profile.profilePhoto)} alt="" className="h-9 w-9 rounded-lg object-cover" /> : <span className="text-sm font-semibold">{profile?.name?.[0]?.toUpperCase() || "C"}</span>}
           </button>
         </header>
 
-        {/* Mobile Sidebar Overlay */}
-        {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 flex lg:hidden">
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeMobileMenu} />
-            <aside className="relative w-72 max-w-[80%] bg-slate-900 text-white flex flex-col h-full shadow-2xl">
-              <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-                <span className="font-black text-xl text-white">eNai</span>
-                <button onClick={closeMobileMenu} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl"><X className="w-5 h-5" /></button>
-              </div>
-              <div className="p-6 border-b border-slate-800 flex items-center gap-4">
-                {profile?.profilePhoto ? (
-                  <img src={photoUrl(profile.profilePhoto)} className="w-12 h-12 rounded-xl object-cover border border-slate-700" />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg">{profile?.name ? profile.name[0].toUpperCase() : "C"}</div>
-                )}
-                <div>
-                  <p className="font-bold text-sm truncate">{profile?.name || "Customer"}</p>
-                  <p className="text-xs text-slate-400 truncate">+91 {phone}</p>
-                </div>
-              </div>
-              <nav className="flex-1 p-4 space-y-2 flex flex-col">
-                <button onClick={() => { setActiveTab("home"); closeMobileMenu(); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm ${activeTab === 'home' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}><Search className="w-4 h-4"/> Find Barbers</button>
-                <button onClick={() => { setActiveTab("bookings"); closeMobileMenu(); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm ${activeTab === 'bookings' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}><Calendar className="w-4 h-4"/> My Bookings</button>
-                <button onClick={() => { setActiveTab("profile"); closeMobileMenu(); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm ${activeTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}><User className="w-4 h-4"/> Profile</button>
-                
-                <div className="mt-auto pt-8">
-                  <button 
-                    onClick={() => { logoutCustomer(); navigate("/"); }} 
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4"/> Sign Out
-                  </button>
-                </div>
-              </nav>
-            </aside>
-          </div>
-        )}
-
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto w-full pb-20">
+        <div className="w-full flex-1 overflow-y-auto pb-24 lg:pb-10">
           
           {activeTab === "home" && (
             <>
               {/* Home Header */}
-              <div className="bg-slate-900 px-6 sm:px-10 pt-12 pb-14 rounded-b-[40px] shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-400 via-transparent to-transparent pointer-events-none" />
-                <div className="max-w-4xl mx-auto relative z-10">
-                  <h1 className="text-3xl sm:text-5xl font-black text-white mb-3 leading-tight tracking-tight">
-                    {profile?.name ? `Hey, ${profile.name.split(" ")[0]}!` : "Find a Barbershop"}
+              <div className="relative overflow-hidden border-b border-[#ded2c6] bg-[#eee5db] px-5 pb-9 pt-9 sm:px-10 sm:pb-11 sm:pt-12">
+                <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-[#e6b099]/45 blur-3xl" />
+                <div className="relative z-10 mx-auto max-w-4xl">
+                  <p className="mb-3 text-sm font-medium text-[#8a4a32]">Discover</p>
+                  <h1 className="mb-3 text-3xl font-semibold leading-tight tracking-[-.05em] text-[#24201d] sm:text-5xl">
+                    {profile?.name ? `${profile.name.split(" ")[0]}, find a time that works.` : "Find a time that works."}
                   </h1>
-                  <p className="text-slate-400 text-base sm:text-lg mb-8 font-medium">
-                    Discover and book premium barbers near you.
+                  <p className="mb-7 max-w-lg text-base leading-6 text-[#625951] sm:text-lg">
+                    Search local shops, check services, and reserve your slot before you leave.
                   </p>
                   <form onSubmit={(e) => { e.preventDefault(); setSubmitted(query.trim()); }} className="flex flex-col sm:flex-row gap-3">
                     <div className="flex-1 relative">
-                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#756b62]" />
                       <input
                         type="text"
-                        placeholder="Search by shop name or city..."
+                        placeholder="Search a shop or area"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        className="w-full pl-14 pr-4 py-4 rounded-2xl bg-white/10 border border-white/10 text-white placeholder-slate-400 text-base focus:outline-none focus:bg-white/15 focus:border-blue-500 transition-all shadow-inner font-medium"
+                        className="min-h-14 w-full rounded-xl border border-[#cfc2b6] bg-[#fffaf5] pl-12 pr-4 text-base font-medium text-[#24201d] placeholder:text-[#8f847b]"
                       />
                     </div>
                     {isSearching ? (
-                      <button type="button" onClick={() => { setQuery(""); setSubmitted(""); }} className="bg-slate-700 text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-slate-600 transition-colors flex-shrink-0">Clear</button>
+                      <button type="button" onClick={() => { setQuery(""); setSubmitted(""); }} className="min-h-14 rounded-xl border border-[#cfc2b6] bg-[#fffaf5] px-7 text-sm font-semibold text-[#403a35] transition-colors hover:bg-white">Clear</button>
                     ) : (
-                      <button type="submit" className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black text-sm hover:bg-blue-500 transition-colors flex-shrink-0 shadow-lg shadow-blue-600/30">Search</button>
+                      <button type="submit" className="min-h-14 rounded-xl bg-[#b85434] px-8 text-sm font-semibold text-white transition-colors hover:bg-[#9f4529]">Search</button>
                     )}
                   </form>
                 </div>
               </div>
 
               {/* Sorting & Shops */}
-              <div className="max-w-4xl mx-auto px-6 py-10">
+              <div className="mx-auto max-w-4xl px-5 py-8 sm:px-6 sm:py-10">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    {isSearching ? `Results for "${submitted}"` : "Top Barbers"}
-                  </h2>
-                  
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-[-.035em] text-[#24201d]">
+                      {isSearching ? `Results for “${submitted}”` : "Shops near you"}
+                    </h2>
+                    {!isSearching && <p className="mt-1 text-sm text-[#756b62]">Choose a shop and see its available times.</p>}
+                  </div>
+                   <div className="flex flex-col sm:flex-row gap-3">
                     {/* Gender Filter UI */}
-                    <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto overflow-x-auto">
+                    <div className="flex self-start overflow-x-auto rounded-xl border border-[#ded2c6] bg-[#f2ece5] p-1 sm:self-auto">
                       <button
                         onClick={() => setFilterGender("all")}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-lg px-3.5 text-sm font-medium transition-all ${filterGender === "all" ? "bg-[#fffaf5] text-[#24201d] shadow-sm" : "text-[#756b62] hover:text-[#403a35]"}`}
                       >
                         All
                       </button>
                       <button
                         onClick={() => setFilterGender("male")}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "male" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-lg px-3.5 text-sm font-medium transition-all ${filterGender === "male" ? "bg-[#fffaf5] text-[#24201d] shadow-sm" : "text-[#756b62] hover:text-[#403a35]"}`}
                       >
                         Male
                       </button>
                       <button
                         onClick={() => setFilterGender("female")}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "female" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-lg px-3.5 text-sm font-medium transition-all ${filterGender === "female" ? "bg-[#fffaf5] text-[#24201d] shadow-sm" : "text-[#756b62] hover:text-[#403a35]"}`}
                       >
                         Female
                       </button>
                       <button
                         onClick={() => setFilterGender("unisex")}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterGender === "unisex" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-lg px-3.5 text-sm font-medium transition-all ${filterGender === "unisex" ? "bg-[#fffaf5] text-[#24201d] shadow-sm" : "text-[#756b62] hover:text-[#403a35]"}`}
                       >
                         Unisex
                       </button>
                     </div>
 
                     {/* Sorting Logic UI */}
-                    <div className="flex bg-slate-200/60 p-1.5 rounded-xl self-start sm:self-auto">
+                    <div className="flex self-start rounded-xl border border-[#ded2c6] bg-[#f2ece5] p-1 sm:self-auto">
                       <button
                         onClick={() => setSortBy("distance")}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === "distance" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-lg px-4 text-sm font-medium transition-all ${sortBy === "distance" ? "bg-[#fffaf5] text-[#24201d] shadow-sm" : "text-[#756b62] hover:text-[#403a35]"}`}
                       >
                         Nearest
                       </button>
                       <button
                         onClick={() => setSortBy("price")}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${sortBy === "price" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                        className={`min-h-10 rounded-lg px-4 text-sm font-medium transition-all ${sortBy === "price" ? "bg-[#fffaf5] text-[#24201d] shadow-sm" : "text-[#756b62] hover:text-[#403a35]"}`}
                       >
                         Cheapest
                       </button>
@@ -465,13 +419,13 @@ export default function CustomerHome() {
 
                 {(isSearching ? searchLoading : shopsLoading) ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-40 bg-slate-200 rounded-3xl animate-pulse" />)}
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-40 animate-pulse rounded-2xl bg-[#e7ddd3]" />)}
                   </div>
                 ) : sortedShops.length === 0 ? (
-                  <div className="text-center py-24 bg-white rounded-[2rem] border border-slate-200 border-dashed">
-                    <Scissors className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="font-black text-lg text-slate-600">No shops found</p>
-                    <p className="text-sm font-medium text-slate-400 mt-1">Try searching a different city</p>
+                  <div className="rounded-2xl border border-dashed border-[#cfc2b6] bg-[#fffaf5] py-20 text-center">
+                    <Scissors className="mx-auto mb-4 h-10 w-10 text-[#b4a79d]" />
+                    <p className="text-lg font-semibold text-[#403a35]">No shops found</p>
+                    <p className="mt-1 text-sm text-[#756b62]">Try a different shop name or nearby area.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -630,6 +584,20 @@ export default function CustomerHome() {
 
         </div>
       </main>
+
+      <nav aria-label="Customer navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-[#ded2c6] bg-[#fffaf5]/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
+        {([
+          ["home", "Discover", Search],
+          ["bookings", "Bookings", Calendar],
+          ["profile", "Profile", User],
+        ] as const).map(([tab, label, Icon]) => (
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-xs font-semibold transition-colors ${activeTab === tab ? "bg-[#f1e2d8] text-[#8a4a32]" : "text-[#756b62]"}`}>
+            <Icon className="h-4 w-4" />
+            {label}
+            {tab === "bookings" && upcomingBookings.length > 0 && <span className="sr-only">, {upcomingBookings.length} upcoming</span>}
+          </button>
+        ))}
+      </nav>
 
       {/* Cancel Modal */}
       {confirmCancel !== null && (

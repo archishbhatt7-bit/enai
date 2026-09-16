@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useCreateService } from "@workspace/api-client-react";
-import { Scissors, Check, Plus, Trash2, Camera, MapPin, Navigation } from "lucide-react";
+import { Check, Plus, Trash2, Camera, MapPin, Navigation } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import LocationPicker from "@/components/LocationPicker";
+import BrandMark from "@/components/BrandMark";
 
 const PRESET_SERVICES = [
   { name: "Haircut", price: 150, durationMinutes: 30 },
@@ -218,26 +219,26 @@ export default function CreateShop() {
   const currentStepIdx = STEPS.indexOf(step);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
-              <Scissors className="w-3.5 h-3.5 text-slate-900" />
-            </div>
-            <span className="font-bold text-slate-900">eNai — Create Shop</span>
-          </div>
+    <div className="min-h-screen bg-[#f7f2eb]">
+      <header className="border-b border-[#ded2c6] bg-[#fffaf5]">
+        <div className="mx-auto flex max-w-2xl items-center gap-3 px-5 py-4">
+          <BrandMark withWordmark className="text-lg" />
+          <span className="text-sm text-[#756b62]">Set up your shop</span>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="mx-auto max-w-2xl px-5 py-8 sm:py-10">
+        <div className="mb-7">
+          <p className="text-sm font-medium text-[#8a4a32]">Shop setup</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-[-.04em] text-[#24201d]">Make your booking page useful from day one.</h1>
+        </div>
         {/* Progress */}
         <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-1">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center gap-2 flex-shrink-0">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
                 step === s
-                  ? "bg-blue-600 border-blue-600 text-slate-900"
+                  ? "bg-blue-600 border-blue-600 text-white"
                   : currentStepIdx > i
                   ? "bg-green-500 border-green-500 text-white"
                   : "border-slate-300 text-slate-400"

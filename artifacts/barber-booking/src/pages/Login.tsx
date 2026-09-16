@@ -1,23 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Store } from "lucide-react";
 import { useLoginBarber } from "@workspace/api-client-react";
+import BrandMark from "@/components/BrandMark";
 import { useAuth } from "@/lib/auth";
-import { Scissors, ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [, navigate] = useLocation();
   const { login, isAuthenticated, shop } = useAuth();
-  
-  // If already logged in, bounce to dashboard immediately
-  if (isAuthenticated) {
-    if (shop) {
-      navigate(`/dashboard/${shop.slug}`, { replace: true });
-    } else {
-      navigate("/create-shop", { replace: true });
-    }
-    return null;
-  }
-
   const [form, setForm] = useState({ phone: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -26,117 +16,63 @@ export default function Login() {
     mutation: {
       onSuccess: (data: any) => {
         login(data.token, data.owner, data.shop);
-        if (data.shop) {
-          navigate(`/dashboard/${data.shop.slug}`);
-        } else {
-          // If no shop exists yet, they need to create one
-          navigate("/create-shop");
-        }
+        navigate(data.shop ? `/dashboard/${data.shop.slug}` : "/create-shop");
       },
-      onError: () => {
-        setError("Invalid phone number or password. Please try again.");
-      },
+      onError: () => setError("That phone number or password does not match our records."),
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  if (isAuthenticated) {
+    navigate(shop ? `/dashboard/${shop.slug}` : "/create-shop", { replace: true });
+    return null;
+  }
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
     setError("");
     if (!form.phone || !form.password) {
-      setError("All fields are required.");
+      setError("Enter your phone number and password to continue.");
       return;
     }
     mutation.mutate({ data: form });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button onClick={() => navigate("/")} className="text-slate-500 hover:text-slate-900 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+    <main className="min-h-screen bg-[#f7f2eb] px-5 py-5 sm:grid sm:place-items-center sm:p-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-[#ded2c6] bg-[#fffaf5] shadow-[0_22px_55px_rgba(71,50,37,.12)] sm:min-h-0 sm:grid sm:grid-cols-[.9fr_1.1fr]">
+        <section className="bg-[#24201d] p-6 text-[#fffaf5] sm:flex sm:flex-col sm:justify-between sm:p-10">
+          <div>
+            <BrandMark tone="paper" withWordmark className="text-2xl [&_span:last-child]:text-[#fffaf5]" />
+            <p className="mt-12 max-w-sm text-3xl font-semibold leading-[1.05] tracking-[-.05em] sm:text-4xl">Your day, all your chairs, in one calm view.</p>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-[#d7cdc3]">Sign in to manage bookings, availability, and the customers arriving next.</p>
+          </div>
+          <button onClick={() => navigate("/customer-login")} className="mt-10 flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-medium text-[#e9b29a] transition-colors hover:text-white">
+            Looking to book instead? <ArrowRight className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
-              <Scissors className="w-3.5 h-3.5 text-slate-900" />
-            </div>
-            <span className="font-bold text-slate-900">eNai</span>
-          </div>
-        </div>
-      </header>
+        </section>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-sm">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-              <p className="text-slate-500 text-sm mt-1">Sign in to your barber dashboard</p>
-            </div>
-
-            {error && (
-              <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <section className="flex flex-1 flex-col p-6 sm:p-10">
+          <button onClick={() => navigate("/")} className="-ml-2 flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-[#756b62] transition-colors hover:bg-[#f1e7dd] hover:text-[#24201d]"><ArrowLeft className="h-4 w-4" /> Back to home</button>
+          <div className="my-auto max-w-md pb-6 pt-10 sm:py-12">
+            <p className="text-sm font-medium text-[#8a4a32]">Shop owner access</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-.05em] text-[#24201d]">Welcome back.</h1>
+            <p className="mt-3 text-[0.95rem] leading-6 text-[#625951]">Sign in to your eNai workspace.</p>
+            {error && <div role="alert" className="mt-6 rounded-xl border border-[#e6b7ab] bg-[#fff0ec] px-4 py-3 text-sm font-medium text-[#9d3926]">{error}</div>}
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="10-digit mobile number"
-                  value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                />
+                <label htmlFor="barber-phone" className="mb-2 block text-sm font-semibold text-[#403a35]">Mobile number</label>
+                <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 border-r border-[#ded2c6] pr-3 text-sm font-medium text-[#756b62]">+91</span><input id="barber-phone" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} placeholder="98765 43210" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value.replace(/\D/g, "").slice(0, 10) }))} className="min-h-13 w-full rounded-xl border border-[#cfc2b6] bg-white pl-16 pr-4 text-base font-semibold tracking-[.06em] text-[#24201d] placeholder:tracking-normal placeholder:text-[#a1968d]" /></div>
               </div>
-
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Your password"
-                    value={form.password}
-                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className="w-full px-3 py-2.5 pr-10 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+                <label htmlFor="barber-password" className="mb-2 block text-sm font-semibold text-[#403a35]">Password</label>
+                <div className="relative"><input id="barber-password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Your password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} className="min-h-13 w-full rounded-xl border border-[#cfc2b6] bg-white px-4 pr-12 text-base text-[#24201d] placeholder:text-[#a1968d]" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-lg text-[#756b62] hover:bg-[#f1e7dd] hover:text-[#403a35]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
               </div>
-
-              <button
-                type="submit"
-                disabled={mutation.isPending}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-sm hover:bg-blue-500 transition-colors disabled:opacity-60 mt-2"
-              >
-                {mutation.isPending ? "Signing in..." : "Sign In"}
-              </button>
+              <button type="submit" disabled={mutation.isPending} className="mt-2 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#b85434] px-5 text-base font-semibold text-white transition-colors hover:bg-[#9f4529] disabled:cursor-not-allowed disabled:opacity-45">{mutation.isPending ? "Signing in…" : <>Sign in <ArrowRight className="h-4 w-4" /></>}</button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-500">
-                New barber?{" "}
-                <button onClick={() => navigate("/register")} className="text-blue-700 font-semibold hover:text-blue-800">
-                  Register your shop
-                </button>
-              </p>
-            </div>
+            <div className="mt-8 border-t border-[#e5dbd1] pt-6"><p className="text-sm text-[#625951]">New to eNai?</p><button onClick={() => navigate("/register")} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#8a4a32] underline decoration-[#c99a86] underline-offset-4 hover:text-[#6e3020]"><Store className="h-4 w-4" /> Create your shop account</button></div>
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

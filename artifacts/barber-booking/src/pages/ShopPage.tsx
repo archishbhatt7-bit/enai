@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { photoUrl } from "@/components/ImageUpload";
 import { useCustomerAuth } from "@/lib/customerAuth";
+import BrandMark from "@/components/BrandMark";
 
 declare global { interface Window { L: any; Razorpay: any; } }
 
@@ -238,39 +239,8 @@ export default function ShopPage() {
   const [customerName, setCustomerName] = useState(initialName);
   const [customerPhone, setCustomerPhone] = useState(storedPhone);
   const [error, setError] = useState("");
-  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [finalBooking, setFinalBooking] = useState<any>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-
-  function playSuccessSound() {
-    const ctx = new AudioContext();
-    audioCtxRef.current = ctx;
-    const notes = [523.25, 659.25, 783.99, 1046.5];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
-      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + i * 0.12 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.35);
-      osc.start(ctx.currentTime + i * 0.12);
-      osc.stop(ctx.currentTime + i * 0.12 + 0.4);
-    });
-  }
-
-  useEffect(() => {
-    if (step === "confirm") {
-      setShowSuccessOverlay(true);
-      playSuccessSound();
-      const timer = setTimeout(() => setShowSuccessOverlay(false), 2000);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [step]);
 
   const { data: profileData, isLoading: shopLoading } = useGetShop(slug);
   const shop = profileData?.shop as any; // Type override for extended frontend fields
@@ -383,9 +353,7 @@ export default function ShopPage() {
         prefill: {
           contact: customerPhone,
         },
-        theme: {
-          color: "#1e293b",
-        },
+        theme: { color: "#b85434" },
       };
 
       const rzp = new window.Razorpay(options);
@@ -443,16 +411,6 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
-      {showSuccessOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center success-overlay-bg">
-          <div className="success-tick-circle">
-            <svg className="success-tick-svg" viewBox="0 0 52 52" fill="none">
-              <circle className="success-tick-ring" cx="26" cy="26" r="24" stroke="white" strokeWidth="3" fill="none" />
-              <path className="success-tick-check" d="M14 26 L22 34 L38 18" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
@@ -463,10 +421,8 @@ export default function ShopPage() {
               <span>Back</span>
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-inner">
-                <Scissors className="w-4 h-4 text-white" />
-              </div>
-              <h1 className="font-black text-lg text-slate-900 tracking-tight">{shop.shopName}</h1>
+              <BrandMark tone="copper" />
+              <h1 className="font-semibold text-lg text-slate-900 tracking-[-.03em]">{shop.shopName}</h1>
             </div>
           </div>
           <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl ${
@@ -641,8 +597,8 @@ export default function ShopPage() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600 rounded-full blur-3xl opacity-20 -mr-10 -mt-10 pointer-events-none" />
                     
                     <div className="flex items-center justify-between mb-2">
-                       <h2 className="text-xl font-black tracking-tight relative z-10">
-                         {step === "slot" ? "Pick a Time" : step === "contact" ? "Your Details" : step === "payment" ? "Payment Option" : "Verification"}
+                        <h2 className="text-xl font-semibold tracking-[-.035em] relative z-10">
+                          {step === "slot" ? "Choose a time" : step === "contact" ? "Confirm your details" : step === "payment" ? "Review and pay" : "Verification"}
                        </h2>
                        <button onClick={() => setStep("service")} className="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-full relative z-10">
                          <X className="w-4 h-4" />
@@ -674,11 +630,11 @@ export default function ShopPage() {
                   {step !== "confirm" && selectedServiceObj && (
                     <div className="flex justify-between items-center bg-blue-50/50 border border-blue-100 rounded-2xl p-4 mb-8">
                        <div>
-                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Selected Service</p>
+                          <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-1">Selected service</p>
                          <p className="font-bold text-slate-900 text-sm truncate">{selectedServiceObj.name}</p>
                        </div>
                        <div className="text-right">
-                         <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Price</p>
+                          <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mb-1">Price</p>
                          <p className="font-black text-slate-900 text-sm">₹{selectedServiceObj.price}</p>
                        </div>
                     </div>
@@ -804,7 +760,7 @@ export default function ShopPage() {
                         <div className="flex items-center gap-3">
                           <Calendar className="w-5 h-5 text-blue-600" />
                           <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
+                              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Your appointment</p>
                             <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDisplayDate(new Date(selectedDate + "T12:00:00"))} at {selectedTime}</p>
                           </div>
                         </div>
@@ -871,7 +827,7 @@ export default function ShopPage() {
                         <div className="flex items-center gap-3">
                           <Calendar className="w-5 h-5 text-blue-600" />
                           <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Time</p>
+                              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Your appointment</p>
                             <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDisplayDate(new Date(selectedDate + "T12:00:00"))} at {selectedTime}</p>
                           </div>
                         </div>
@@ -936,7 +892,7 @@ export default function ShopPage() {
                       <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
                         <Check className="w-12 h-12 text-green-600" />
                       </div>
-                      <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Confirmed!</h2>
+                       <h2 className="text-3xl font-semibold text-slate-900 mb-3 tracking-[-.05em]">Your time is reserved.</h2>
                       <p className="text-slate-500 text-sm font-medium mb-6">
                         Your slot at <strong className="text-slate-900">{selectedTime}</strong> on <strong className="text-slate-900">{formatDisplayDate(new Date(selectedDate + "T12:00:00"))}</strong> is booked.
                       </p>
@@ -962,14 +918,14 @@ export default function ShopPage() {
                         <div className="mt-5 p-4 bg-red-50 rounded-2xl border border-red-200 flex items-start gap-3">
                            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                            <p className="text-xs font-bold text-red-800 leading-relaxed">
-                             <strong className="text-red-900 uppercase tracking-wider text-[10px] block mb-1">Warning</strong>
-                             Arrive 5-10 minutes early! If you are more than 10 minutes late, your slot will be automatically cancelled.
+                              <strong className="text-red-900 uppercase tracking-wider text-[10px] block mb-1">Before you go</strong>
+                              Please arrive 5–10 minutes early. If you are more than 10 minutes late, the shop may need to release this slot.
                            </p>
                         </div>
                       </div>
 
                       <button onClick={() => navigate("/customer")} className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-sm hover:bg-blue-500 transition-colors shadow-xl shadow-blue-600/20">
-                        Back to Dashboard
+                         View my bookings
                       </button>
                     </div>
                   )}
