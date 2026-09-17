@@ -4,6 +4,7 @@ import { Search, MapPin, Star, ArrowRight, Scissors } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import { useListShops } from "@workspace/api-client-react";
 import { photoUrl } from "@/components/ImageUpload";
+import Footer from "@/components/Footer";
 
 export default function Landing() {
   const [, navigate] = useLocation();
@@ -84,7 +85,7 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {popularShops.map(shop => (
-                <div key={shop.id} className="bg-white rounded-2xl border border-slate-200 p-5 flex gap-4 hover:shadow-md hover:border-[#E8900C]/50 transition-all cursor-pointer" onClick={() => navigate("/customer-login")}>
+                <div key={shop.id} className="bg-white rounded-2xl border border-slate-200 p-5 flex gap-4 hover:shadow-md hover:border-[#E8900C]/50 transition-all cursor-pointer" onClick={() => navigate(`/shop/${shop.slug}`)}>
                   {shop.profilePhoto ? (
                     <img src={photoUrl(shop.profilePhoto)} className="w-20 h-20 rounded-xl object-cover" />
                   ) : (
@@ -122,6 +123,8 @@ export default function Landing() {
            </button>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

@@ -15,6 +15,12 @@ import CreateShop from "@/pages/CreateShop";
 import ShopPage from "@/pages/ShopPage";
 import Dashboard from "@/pages/Dashboard";
 import Admin from "@/pages/Admin";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsAndConditions from "@/pages/TermsAndConditions";
+import RefundPolicy from "@/pages/RefundPolicy";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import Pricing from "@/pages/Pricing";
 import NotFound from "@/pages/not-found";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 
@@ -68,6 +74,12 @@ function Router() {
       <Route path="/shop/:slug" component={ShopPage} />
       <Route path="/dashboard/:slug" component={Dashboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsAndConditions} />
+      <Route path="/refund" component={RefundPolicy} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/pricing" component={Pricing} />
       <Route component={NotFound} />
     </Switch>
   );
