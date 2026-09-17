@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { customFetch, useSendOtp, useVerifyOtp } from "@workspace/api-client-react";
 import BrandMark from "@/components/BrandMark";
 import { useCustomerAuth } from "@/lib/customerAuth";
@@ -23,6 +23,7 @@ export default function CustomerLogin() {
   const [otp, setOtp] = useState("");
   const [demoOtp, setDemoOtp] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [msg91Verifying, setMsg91Verifying] = useState(false);
   const phoneRef = useRef(phone);
 
@@ -101,7 +102,10 @@ export default function CustomerLogin() {
       return;
     }
     if (window.sendOtp) {
-      window.sendOtp(`91${phone}`).then(() => setStep("otp")).catch(() => setError("We could not send your code. Please try again."));
+      setSendingOtp(true);
+      window.sendOtp(`91${phone}`)
+        .then(() => { setSendingOtp(false); setStep("otp"); })
+        .catch(() => { setSendingOtp(false); setError("We could not send your code. Please try again."); });
       return;
     }
     sendOtpMutation.mutate({ data: { phone } });
@@ -158,8 +162,8 @@ export default function CustomerLogin() {
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 border-r border-[#ded2c6] pr-3 text-sm font-medium text-[#756b62]">+91</span>
                   <input id="customer-phone" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} placeholder="98765 43210" value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))} className="min-h-14 w-full rounded-xl border border-[#cfc2b6] bg-white pl-16 pr-4 text-lg font-semibold tracking-[.08em] text-[#24201d] placeholder:tracking-normal placeholder:text-[#a1968d]" />
                 </div>
-                <button type="submit" disabled={phone.length !== 10 || sendOtpMutation.isPending} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#b85434] px-5 text-base font-semibold text-white transition-colors hover:bg-[#9f4529] disabled:cursor-not-allowed disabled:opacity-45">
-                  {sendOtpMutation.isPending ? "Sending code…" : <>Continue <ArrowRight className="h-4 w-4" /></>}
+                <button type="submit" disabled={phone.length !== 10 || sendOtpMutation.isPending || sendingOtp} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#b85434] px-5 text-base font-semibold text-white transition-colors hover:bg-[#9f4529] disabled:cursor-not-allowed disabled:opacity-45">
+                  {(sendOtpMutation.isPending || sendingOtp) ? <><Loader2 className="h-5 w-5 animate-spin" /> Sending code…</> : <>Continue <ArrowRight className="h-4 w-4" /></>}
                 </button>
               </form>
             ) : (
