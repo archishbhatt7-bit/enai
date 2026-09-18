@@ -472,6 +472,64 @@ export default function ShopPage() {
             </div>
           </div>
 
+          {/* Services List */}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Services</h2>
+              <span className="text-sm font-bold text-slate-400 bg-slate-200/50 px-3 py-1 rounded-xl">{services.filter(s => s.isActive).length} Available</span>
+            </div>
+            
+            {shopClosed && (
+              <div className="mb-6 p-5 bg-red-50 border-2 border-red-100 rounded-3xl flex items-start gap-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-red-700 font-black text-lg">Shop is currently {shop.isPaused ? "paused" : "closed"}</p>
+                  <p className="text-red-600 font-medium text-sm mt-1">Online bookings are not available right now. Check the opening hours below.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {services.filter((s) => s.isActive).map((service) => (
+                <button
+                  key={service.id}
+                  type="button"
+                  disabled={shopClosed}
+                  onClick={() => {
+                    setSelectedService(service.id);
+                    setStep("slot");
+                    // Scroll to booking panel on mobile so user sees the next step
+                    setTimeout(() => {
+                      document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
+                  className={`text-left border-2 rounded-3xl p-5 transition-all group disabled:opacity-50 disabled:cursor-not-allowed ${
+                    selectedService === service.id 
+                      ? "border-blue-600 bg-blue-50 shadow-md shadow-blue-900/10" 
+                      : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <p className={`font-black text-lg leading-tight ${selectedService === service.id ? "text-blue-900" : "text-slate-900"}`}>
+                      {service.name}
+                    </p>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${selectedService === service.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600"}`}>
+                      {selectedService === service.id ? <Check className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-auto">
+                    <span className="text-xl font-black text-slate-900 tracking-tight">₹{service.price}</span>
+                    <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg">
+                      <Clock className="w-3.5 h-3.5" /> {service.durationMinutes} min
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {/* Map & Location */}
             <div>
@@ -514,64 +572,6 @@ export default function ShopPage() {
                <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
                  <ShopHours openDays={shop.openDays} openHours={shop.openHours} fallbackOpen={shop.openTime} fallbackClose={shop.closeTime} />
                </div>
-            </div>
-          </div>
-
-          {/* Services List */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Services</h2>
-              <span className="text-sm font-bold text-slate-400 bg-slate-200/50 px-3 py-1 rounded-xl">{services.filter(s => s.isActive).length} Available</span>
-            </div>
-            
-            {shopClosed && (
-              <div className="mb-6 p-5 bg-red-50 border-2 border-red-100 rounded-3xl flex items-start gap-4">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-red-700 font-black text-lg">Shop is currently {shop.isPaused ? "paused" : "closed"}</p>
-                  <p className="text-red-600 font-medium text-sm mt-1">Online bookings are not available right now. Check the opening hours above.</p>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {services.filter((s) => s.isActive).map((service) => (
-                <button
-                  key={service.id}
-                  type="button"
-                  disabled={shopClosed}
-                  onClick={() => {
-                    setSelectedService(service.id);
-                    setStep("slot");
-                    // Scroll to booking panel on mobile so user sees the next step
-                    setTimeout(() => {
-                      document.getElementById("booking-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }, 50);
-                  }}
-                  className={`text-left border-2 rounded-3xl p-5 transition-all group disabled:opacity-50 disabled:cursor-not-allowed ${
-                    selectedService === service.id 
-                      ? "border-blue-600 bg-blue-50 shadow-md shadow-blue-900/10" 
-                      : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-sm"
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <p className={`font-black text-lg leading-tight ${selectedService === service.id ? "text-blue-900" : "text-slate-900"}`}>
-                      {service.name}
-                    </p>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${selectedService === service.id ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600"}`}>
-                      {selectedService === service.id ? <Check className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-auto">
-                    <span className="text-xl font-black text-slate-900 tracking-tight">₹{service.price}</span>
-                    <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg">
-                      <Clock className="w-3.5 h-3.5" /> {service.durationMinutes} min
-                    </span>
-                  </div>
-                </button>
-              ))}
             </div>
           </div>
         </div>
