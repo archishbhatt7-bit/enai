@@ -45,3 +45,11 @@ We have successfully implemented real OTP login for customers using MSG91.
 ### 4. Mobile Navigation Bug
 **Problem:** When a user slides back (back gesture) on mobile devices from the customer dashboard, it incorrectly routes them all the way back to the main landing page.
 **Goal:** Fix the router history stack so that the back button behaves natively and predictably on mobile browsers without breaking the authenticated flow.
+
+### 5. Razorpay Idempotency & Replay Attack Prevention
+**Problem:** Currently `razorpay_order_id` is not saved in the `bookingsTable`, which makes the API vulnerable to replay attacks (a malicious user reusing the same payment payload for multiple time slots).
+**Goal:** Add `razorpay_order_id` as a `UNIQUE` column in `bookingsTable` and query the DB before verification to reject duplicate order IDs.
+
+### 6. Razorpay Webhooks for Drop-off Handling & Cancellations
+**Problem:** If a user pays but their internet connection drops before their app can call `/verify`, their money is deducted but no booking is created. Also, cancellations cannot be refunded currently because `razorpay_payment_id` is not saved.
+**Goal:** Implement Razorpay Webhooks (specifically `payment.captured`), listen to them on the backend, and create bookings asynchronously to handle drop-offs. Also save `razorpay_payment_id` in the database to allow for refunds via the Razorpay `/refunds` API.

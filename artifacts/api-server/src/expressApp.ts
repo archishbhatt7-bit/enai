@@ -42,7 +42,10 @@ app.use(cors({
   origin: (origin, callback) => callback(null, origin || true), 
   credentials: true 
 }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ 
+  limit: "1mb",
+  verify: (req: any, res, buf) => { req.rawBody = buf.toString(); }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/storage/upload", express.raw({ type: ["image/jpeg", "image/png", "image/webp", "image/*"], limit: "10mb" }));
 

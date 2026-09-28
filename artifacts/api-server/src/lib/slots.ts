@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { bookingsTable } from "@workspace/db";
+import { bookingsTable, shopsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 
 const BUFFER_MINUTES = 10;
@@ -114,8 +114,16 @@ export async function assignChair(
   slotTime: string,
   slotEndTime: string,
 ): Promise<number | null> {
-  // FOR UPDATE acquires row-level locks so a concurrent transaction
-  // blocks until this one commits, preventing double-booking.
+  // Lock the shop row to serialize all booking attempts for this shop
+  // This prevents the "Phantom Insert" anomaly where FOR UPDATE on bookings
+  // fails to lock anything if no rows exist for that date yet.
+  await dbOrTx
+    .select({ id: shopsTable.id })
+    .from(shopsTable)
+    .where(eq(shopsTable.id, shopId))
+    .for("update");
+
+  // Fetch existing bookings for this shop on this date
   const existingBookings = await dbOrTx
     .select()
     .from(bookingsTable)

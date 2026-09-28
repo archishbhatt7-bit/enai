@@ -19,6 +19,22 @@ export const bookingsTable = pgTable("bookings", {
   amountPaid: integer("amount_paid").notNull().default(1),
   totalAmount: integer("total_amount").notNull(),
   arrivalOtp: text("arrival_otp"),
+  razorpayOrderId: text("razorpay_order_id").unique(),
+  razorpayPaymentId: text("razorpay_payment_id").unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const paymentOrdersTable = pgTable("payment_orders", {
+  id: serial("id").primaryKey(),
+  orderId: text("order_id").notNull().unique(),
+  shopId: integer("shop_id").notNull(),
+  serviceId: integer("service_id").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone").notNull(),
+  slotDate: text("slot_date").notNull(),
+  slotTime: text("slot_time").notNull(),
+  paymentType: text("payment_type").notNull(),
+  amount: integer("amount").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

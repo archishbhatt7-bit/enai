@@ -15,7 +15,8 @@ eNai is a full-stack barber-shop discovery and appointment booking platform buil
 - **Favourites** — Star shops to pin them at the top of the list (persisted in localStorage)
 - **Live Availability** — See real-time open/closed status and available time slots
 - **Service Selection** — Browse each shop's services with prices and durations
-- **Slot Booking** — Pick a date and time, pay ₹1 platform fee via Razorpay, and receive a 4-digit arrival OTP
+- **Slot Booking** — Pick a date and time, pay a ₹5 platform fee (or full price) via Razorpay, and receive a 4-digit arrival OTP
+- **Idempotent Payments** — Server-side intent tracking and Razorpay webhooks ensure bookings succeed even if the network drops post-payment
 - **Booking Management** — View upcoming and past appointments, cancel bookings
 
 ### For Shop Owners
@@ -136,8 +137,9 @@ enai/
 ### Payments
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/api/payments/create-order` | Create Razorpay order (amount from DB) |
-| POST | `/api/payments/verify` | Verify Razorpay signature + create booking |
+| POST | `/api/payments/create-order` | Create Razorpay order and save booking intent |
+| POST | `/api/payments/verify` | Verify Razorpay signature + fulfil booking |
+| POST | `/api/payments/webhook` | Listen for `payment.captured` for drop-off handling |
 
 ### Admin
 | Method | Endpoint | Description |
@@ -208,6 +210,7 @@ enai/
 | `shops` | Shop profiles (name, slug, location, hours, photos, status) |
 | `services` | Services offered by each shop (name, price, duration) |
 | `bookings` | Customer appointments (slot date/time, chair, status, OTP, payment) |
+| `payment_orders` | Pre-payment intent storage for Razorpay idempotency |
 | `otp_sessions` | Temporary OTP records for customer login |
 | `photo_store` | GCS object metadata |
 

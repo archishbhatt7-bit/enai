@@ -279,6 +279,9 @@ export default function ShopPage() {
           slug,
           serviceId: selectedService!,
           paymentType,
+          customerName,
+          slotDate: selectedDate,
+          slotTime: selectedTime!,
         }),
       });
 
