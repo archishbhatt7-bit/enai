@@ -23,9 +23,24 @@ router.get("/shops/:slug/slots/:date/:serviceId", async (req, res) => {
   const slug = req.params.slug as string;
   const date = req.params.date as string;
   const serviceId = req.params.serviceId as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  // Parallelize shop + service lookups
+  const [shops, services] = await Promise.all([
+    db.select({
+      id: shopsTable.id,
+      isOpen: shopsTable.isOpen,
+      isPaused: shopsTable.isPaused,
+      pausedUntil: shopsTable.pausedUntil,
+      numChairs: shopsTable.numChairs,
+      openTime: shopsTable.openTime,
+      closeTime: shopsTable.closeTime,
+    }).from(shopsTable).where(eq(shopsTable.slug, slug)),
+    db.select().from(servicesTable).where(eq(servicesTable.id, Number(serviceId))),
+  ]);
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (services.length === 0) return res.status(404).json({ error: "Service not found" });
   const shop = shops[0];
+  const service = services[0];
+  if (service.shopId !== shop.id) return res.status(404).json({ error: "Service not found in this shop" });
 
   // Check if paused expiry
   let isPaused = shop.isPaused;
@@ -33,14 +48,6 @@ router.get("/shops/:slug/slots/:date/:serviceId", async (req, res) => {
     await db.update(shopsTable).set({ isPaused: false, pausedUntil: null }).where(eq(shopsTable.id, shop.id));
     isPaused = false;
   }
-
-  const services = await db
-    .select()
-    .from(servicesTable)
-    .where(and(eq(servicesTable.id, Number(serviceId)), eq(servicesTable.shopId, shop.id)));
-
-  if (services.length === 0) return res.status(404).json({ error: "Service not found" });
-  const service = services[0];
 
   const slots = await getAvailableSlots(
     shop.id,
@@ -59,20 +66,18 @@ router.get("/shops/:slug/slots/:date/:serviceId", async (req, res) => {
   });
 });
 
-// GET /shops/:slug/bookings
+// GET /shops/:slug/bookings — parallelize bookings + services
 router.get("/shops/:slug/bookings", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const rawBookings = await db
-    .select()
-    .from(bookingsTable)
-    .where(eq(bookingsTable.shopId, shops[0].id));
-
-  const services = await db.select().from(servicesTable).where(eq(servicesTable.shopId, shops[0].id));
+  const [rawBookings, services] = await Promise.all([
+    db.select().from(bookingsTable).where(eq(bookingsTable.shopId, shop.id)),
+    db.select().from(servicesTable).where(eq(servicesTable.shopId, shop.id)),
+  ]);
   const serviceMap = new Map(services.map((s) => [s.id, s]));
 
   const result = rawBookings.map((b) => serializeBooking(b, serviceMap.get(b.serviceId)));
@@ -82,15 +87,6 @@ router.get("/shops/:slug/bookings", requireOwnerAuth, async (req: OwnerAuthReque
 // POST /shops/:slug/bookings
 router.post("/shops/:slug/bookings", requireCustomerAuth, async (req: CustomerAuthRequest, res) => {
   const slug = req.params.slug as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
-  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
-  const shop = shops[0];
-
-  if (!shop.isOpen) return res.status(400).json({ error: "Shop is currently closed" });
-  if (shop.isPaused && (!shop.pausedUntil || shop.pausedUntil > new Date())) {
-    return res.status(400).json({ error: "Bookings are paused" });
-  }
-
   const { customerName, serviceId, slotDate, slotTime, paymentType } = req.body;
   const customerPhone = req.customerPhone!;
   if (!customerName || typeof customerName !== "string") {
@@ -109,13 +105,27 @@ router.post("/shops/:slug/bookings", requireCustomerAuth, async (req: CustomerAu
     return res.status(400).json({ error: "paymentType must be 'token' or 'full'" });
   }
 
-  const services = await db
-    .select()
-    .from(servicesTable)
-    .where(and(eq(servicesTable.id, Number(serviceId)), eq(servicesTable.shopId, shop.id)));
-
+  // Parallelize shop + service lookups
+  const [shops, services] = await Promise.all([
+    db.select({
+      id: shopsTable.id,
+      isOpen: shopsTable.isOpen,
+      isPaused: shopsTable.isPaused,
+      pausedUntil: shopsTable.pausedUntil,
+      numChairs: shopsTable.numChairs,
+    }).from(shopsTable).where(eq(shopsTable.slug, slug)),
+    db.select().from(servicesTable).where(eq(servicesTable.id, Number(serviceId))),
+  ]);
+  if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   if (services.length === 0) return res.status(400).json({ error: "Service not found" });
+  const shop = shops[0];
   const service = services[0];
+  if (service.shopId !== shop.id) return res.status(400).json({ error: "Service not found in this shop" });
+
+  if (!shop.isOpen) return res.status(400).json({ error: "Shop is currently closed" });
+  if (shop.isPaused && (!shop.pausedUntil || shop.pausedUntil > new Date())) {
+    return res.status(400).json({ error: "Bookings are paused" });
+  }
 
   // Validate booking date range
   const now = new Date();
@@ -218,7 +228,7 @@ router.post("/shops/:slug/bookings/:bookingId/verify-otp", requireOwnerAuth, asy
   const bookingId = req.params.bookingId as string;
   const { otp } = req.body;
 
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
@@ -251,7 +261,7 @@ router.post("/shops/:slug/bookings/:bookingId/verify-otp", requireOwnerAuth, asy
 router.post("/shops/:slug/bookings/:bookingId/no-show", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
   const bookingId = req.params.bookingId as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
@@ -271,7 +281,7 @@ router.post("/shops/:slug/bookings/:bookingId/no-show", requireOwnerAuth, async 
 router.post("/shops/:slug/bookings/:bookingId/undo-no-show", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
   const bookingId = req.params.bookingId as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
@@ -291,7 +301,7 @@ router.post("/shops/:slug/bookings/:bookingId/undo-no-show", requireOwnerAuth, a
 router.post("/shops/:slug/bookings/:bookingId/complete", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
   const bookingId = req.params.bookingId as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
@@ -307,21 +317,26 @@ router.post("/shops/:slug/bookings/:bookingId/complete", requireOwnerAuth, async
   return res.json(serializeBooking(updated, services[0]));
 });
 
-// GET /shops/:slug/timeline/:date
+// GET /shops/:slug/timeline/:date — parallelize bookings + services
 router.get("/shops/:slug/timeline/:date", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
   const date = req.params.date as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({
+    id: shopsTable.id,
+    ownerId: shopsTable.ownerId,
+    numChairs: shopsTable.numChairs,
+    openTime: shopsTable.openTime,
+    closeTime: shopsTable.closeTime,
+  }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   const shop = shops[0];
   if (shop.ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const rawBookings = await db
-    .select()
-    .from(bookingsTable)
-    .where(and(eq(bookingsTable.shopId, shop.id), eq(bookingsTable.slotDate, date)));
-
-  const services = await db.select().from(servicesTable).where(eq(servicesTable.shopId, shop.id));
+  const [rawBookings, services] = await Promise.all([
+    db.select().from(bookingsTable)
+      .where(and(eq(bookingsTable.shopId, shop.id), eq(bookingsTable.slotDate, date))),
+    db.select().from(servicesTable).where(eq(servicesTable.shopId, shop.id)),
+  ]);
   const serviceMap = new Map(services.map((s) => [s.id, s]));
 
   const chairs: Array<{ chairNumber: number; bookings: ReturnType<typeof serializeBooking>[] }> = [];
@@ -340,19 +355,17 @@ router.get("/shops/:slug/timeline/:date", requireOwnerAuth, async (req: OwnerAut
   });
 });
 
-// GET /shops/:slug/activity
+// GET /shops/:slug/activity — parallelize bookings + services
 router.get("/shops/:slug/activity", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const rawBookings = await db
-    .select()
-    .from(bookingsTable)
-    .where(eq(bookingsTable.shopId, shops[0].id));
-
-  const services = await db.select().from(servicesTable).where(eq(servicesTable.shopId, shops[0].id));
+  const [rawBookings, services] = await Promise.all([
+    db.select().from(bookingsTable).where(eq(bookingsTable.shopId, shops[0].id)),
+    db.select().from(servicesTable).where(eq(servicesTable.shopId, shops[0].id)),
+  ]);
   const serviceMap = new Map(services.map((s) => [s.id, s]));
 
   // Build activity feed from bookings
@@ -381,15 +394,18 @@ router.get("/shops/:slug/activity", requireOwnerAuth, async (req: OwnerAuthReque
   return res.json(activities);
 });
 
-// GET /shops/:slug/revenue
+// GET /shops/:slug/revenue — select only needed columns
 router.get("/shops/:slug/revenue", requireOwnerAuth, async (req: OwnerAuthRequest, res) => {
   const slug = req.params.slug as string;
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const shops = await db.select({ id: shopsTable.id, ownerId: shopsTable.ownerId }).from(shopsTable).where(eq(shopsTable.slug, slug));
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
   if (shops[0].ownerId !== req.ownerId) return res.status(403).json({ error: "Forbidden" });
 
-  const allBookings = await db
-    .select()
+  const allBookings = await db.select({
+    slotDate: bookingsTable.slotDate,
+    status: bookingsTable.status,
+    amountPaid: bookingsTable.amountPaid,
+  })
     .from(bookingsTable)
     .where(eq(bookingsTable.shopId, shops[0].id));
 
@@ -443,7 +459,7 @@ router.post("/customer/bookings/:bookingId/cancel", requireCustomerAuth, async (
   return res.json({ success: true, booking: serializeBooking(updated) });
 });
 
-// GET /customer/bookings/all — all bookings for a customer
+// GET /customer/bookings/all — all bookings for a customer, parallelize shops + services
 router.get("/customer/bookings/all", requireCustomerAuth, async (req: any, res: any) => {
   const authReq = req as CustomerAuthRequest;
   const phone = authReq.customerPhone;
@@ -455,23 +471,31 @@ router.get("/customer/bookings/all", requireCustomerAuth, async (req: any, res: 
     .where(eq(bookingsTable.customerPhone, phone));
 
   const shopIds = [...new Set(rows.map((b) => b.shopId))];
-  const shops = shopIds.length
-    ? await db.select().from(shopsTable).where(
-        shopIds.length === 1
-          ? eq(shopsTable.id, shopIds[0])
-          : inArray(shopsTable.id, shopIds)
-      )
-    : [];
-  const shopMap = Object.fromEntries(shops.map((s) => [s.id, s]));
-
   const serviceIds = [...new Set(rows.map((b) => b.serviceId))];
-  const services = serviceIds.length
-    ? await db.select().from(servicesTable).where(
-        serviceIds.length === 1
-          ? eq(servicesTable.id, serviceIds[0])
-          : inArray(servicesTable.id, serviceIds)
-      )
-    : [];
+
+  // Parallelize shops + services lookups
+  const [shops, services] = await Promise.all([
+    shopIds.length
+      ? db.select({
+          id: shopsTable.id,
+          shopName: shopsTable.shopName,
+          slug: shopsTable.slug,
+          city: shopsTable.city,
+        }).from(shopsTable).where(
+          shopIds.length === 1
+            ? eq(shopsTable.id, shopIds[0])
+            : inArray(shopsTable.id, shopIds)
+        )
+      : Promise.resolve([] as { id: number; shopName: string; slug: string; city: string }[]),
+    serviceIds.length
+      ? db.select({ id: servicesTable.id, name: servicesTable.name }).from(servicesTable).where(
+          serviceIds.length === 1
+            ? eq(servicesTable.id, serviceIds[0])
+            : inArray(servicesTable.id, serviceIds)
+        )
+      : Promise.resolve([] as { id: number; name: string }[]),
+  ]);
+  const shopMap = Object.fromEntries(shops.map((s) => [s.id, s]));
   const serviceMap = Object.fromEntries(services.map((s) => [s.id, s]));
 
   const result = rows
@@ -496,7 +520,7 @@ router.get("/customer/bookings/all", requireCustomerAuth, async (req: any, res: 
   return res.json(result);
 });
 
-// GET /customer/bookings — upcoming bookings for a customer
+// GET /customer/bookings — upcoming bookings, parallelize shops + services
 router.get("/customer/bookings", requireCustomerAuth, async (req: any, res: any) => {
   const authReq = req as CustomerAuthRequest;
   const phone = authReq.customerPhone;
@@ -519,25 +543,32 @@ router.get("/customer/bookings", requireCustomerAuth, async (req: any, res: any)
     return false;
   });
 
-  // Enrich with shop info
+  // Enrich with shop + service info in parallel
   const shopIds = [...new Set(upcoming.map((b) => b.shopId))];
-  const shops = shopIds.length
-    ? await db.select().from(shopsTable).where(
-        shopIds.length === 1
-          ? eq(shopsTable.id, shopIds[0])
-          : inArray(shopsTable.id, shopIds)
-      )
-    : [];
-  const shopMap = Object.fromEntries(shops.map((s) => [s.id, s]));
-
   const serviceIds = [...new Set(upcoming.map((b) => b.serviceId))];
-  const services = serviceIds.length
-    ? await db.select().from(servicesTable).where(
-        serviceIds.length === 1
-          ? eq(servicesTable.id, serviceIds[0])
-          : inArray(servicesTable.id, serviceIds)
-      )
-    : [];
+
+  const [shops, services] = await Promise.all([
+    shopIds.length
+      ? db.select({
+          id: shopsTable.id,
+          shopName: shopsTable.shopName,
+          slug: shopsTable.slug,
+          city: shopsTable.city,
+        }).from(shopsTable).where(
+          shopIds.length === 1
+            ? eq(shopsTable.id, shopIds[0])
+            : inArray(shopsTable.id, shopIds)
+        )
+      : Promise.resolve([] as { id: number; shopName: string; slug: string; city: string }[]),
+    serviceIds.length
+      ? db.select({ id: servicesTable.id, name: servicesTable.name }).from(servicesTable).where(
+          serviceIds.length === 1
+            ? eq(servicesTable.id, serviceIds[0])
+            : inArray(servicesTable.id, serviceIds)
+        )
+      : Promise.resolve([] as { id: number; name: string }[]),
+  ]);
+  const shopMap = Object.fromEntries(shops.map((s) => [s.id, s]));
   const serviceMap = Object.fromEntries(services.map((s) => [s.id, s]));
 
   const result = upcoming

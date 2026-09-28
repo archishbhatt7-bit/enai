@@ -50,7 +50,8 @@ app.use("/api/storage/upload", express.raw({ type: ["image/jpeg", "image/png", "
 app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 10, message: "Too many auth attempts, please try again later" }));
 app.use("/api/admin/login", rateLimit({ windowMs: 60_000, max: 5, message: "Too many login attempts, please try again later" }));
 // General rate limit: 100 requests per minute per IP
-app.use(rateLimit({ windowMs: 60_000, max: 100 }));
+// TEMPORARILY DISABLED FOR AUTOCANNON BENCHMARKING
+// app.use(rateLimit({ windowMs: 60_000, max: 100 }));
 
 app.use("/api", router);
 

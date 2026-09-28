@@ -10,7 +10,16 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  // Keep max low — Supavisor handles real pooling on port 6543.
+  max: 5,
+  idleTimeoutMillis: 20_000,
+  // Fail fast (5s) instead of hanging forever when DB is unreachable
+  connectionTimeoutMillis: 5_000,
+});
+export const db = drizzle(pool, { 
+  schema,
+});
 
 export * from "./schema";

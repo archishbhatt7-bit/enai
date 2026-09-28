@@ -34,17 +34,18 @@ router.post("/payments/create-order", requireCustomerAuth, async (req: CustomerA
     return res.status(400).json({ error: "paymentType must be 'token' or 'full'" });
   }
 
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  const [shops, services] = await Promise.all([
+    db.select({ id: shopsTable.id }).from(shopsTable).where(eq(shopsTable.slug, slug)),
+    db.select().from(servicesTable).where(eq(servicesTable.id, Number(serviceId)))
+  ]);
+
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
-  const shop = shops[0];
-
-  const services = await db
-    .select()
-    .from(servicesTable)
-    .where(and(eq(servicesTable.id, Number(serviceId)), eq(servicesTable.shopId, shop.id)));
-
   if (services.length === 0) return res.status(404).json({ error: "Service not found" });
+
+  const shop = shops[0];
   const service = services[0];
+
+  if (service.shopId !== shop.id) return res.status(404).json({ error: "Service not found in this shop" });
 
   // Option C: ₹5 platform fee for token, full price as deposit for "full"
   const amountInr = paymentType === "full" ? service.price : 5;
@@ -171,23 +172,30 @@ router.post("/payments/verify", requireCustomerAuth, async (req: CustomerAuthReq
     req.log.warn("RAZORPAY_KEY_SECRET missing — skipping signature verification (dev mode)");
   }
 
-  // --- Create the booking (same logic as POST /shops/:slug/bookings) ---
-  const shops = await db.select().from(shopsTable).where(eq(shopsTable.slug, slug));
+  // --- Create the booking ---
+  const [shops, services] = await Promise.all([
+    db.select({
+      id: shopsTable.id,
+      isOpen: shopsTable.isOpen,
+      isPaused: shopsTable.isPaused,
+      pausedUntil: shopsTable.pausedUntil,
+      numChairs: shopsTable.numChairs,
+    }).from(shopsTable).where(eq(shopsTable.slug, slug)),
+    db.select().from(servicesTable).where(eq(servicesTable.id, Number(serviceId)))
+  ]);
+
   if (shops.length === 0) return res.status(404).json({ error: "Shop not found" });
+  if (services.length === 0) return res.status(400).json({ error: "Service not found" });
+
   const shop = shops[0];
+  const service = services[0];
+
+  if (service.shopId !== shop.id) return res.status(400).json({ error: "Service not found in this shop" });
 
   if (!shop.isOpen) return res.status(400).json({ error: "Shop is currently closed" });
   if (shop.isPaused && (!shop.pausedUntil || shop.pausedUntil > new Date())) {
     return res.status(400).json({ error: "Bookings are paused" });
   }
-
-  const services = await db
-    .select()
-    .from(servicesTable)
-    .where(and(eq(servicesTable.id, Number(serviceId)), eq(servicesTable.shopId, shop.id)));
-
-  if (services.length === 0) return res.status(400).json({ error: "Service not found" });
-  const service = services[0];
 
   // Validate booking date range
   const now = new Date();
