@@ -224,6 +224,4 @@ Environment variables (`DATABASE_URL`, `JWT_SECRET`, `RAZORPAY_KEY_ID`, etc.) ar
 
 ---
 
-## License
 
-MIT
